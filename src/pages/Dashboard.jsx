@@ -5,7 +5,7 @@ import StatCard from "../components/Dashboard/StatCard";
 import Sidebar from "../components/Dashboard/Sidebar";
 import Header from "../components/Dashboard/Header";
 import EarthquakeMap from "../components/Dashboard/EarthquakeMap";
-// import { getCityName } from "../utils/geocoding";
+import { getCityName } from "../utils/geocoding";
 
 // Helper to wait between API calls to avoid 403 Forbidden
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -18,7 +18,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
 
-  const fetchQuakes = async () => {
+const fetchQuakes = async () => {
     setLoading(true);
     try {
       const now = new Date();
@@ -29,17 +29,20 @@ export default function Dashboard() {
       let results = [];
       let offset = 1;
 
-      // Keep fetching until we have 10 valid Pakistan-based earthquakes
+      // --- NEW: Helper function for manual delay ---
+      const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
       while (results.length < 10) {
-        const url = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=${startDate}&orderby=time&minlatitude=23.5&maxlatitude=37.1&minlongitude=60.5&maxlongitude=77.8&limit=50&offset=${offset}`;
+        const url = https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=${startDate}&orderby=time&minlatitude=23.5&maxlatitude=37.1&minlongitude=60.5&maxlongitude=77.8&limit=50&offset=${offset};
         const res = await fetch(url);
         const data = await res.json();
+        
         if (!data.features || !data.features.length) break;
 
-        const batch = [];
-
-        // Process each earthquake ONE BY ONE instead of all at once
+        // --- NEW: Sequential Loop instead of Promise.all ---
         for (const ev of data.features) {
+          if (results.length >= 10) break; // Stop once we have 10 valid quakes
+
           try {
             const lat = ev.geometry.coordinates[1];
             const lon = ev.geometry.coordinates[0];
@@ -49,50 +52,46 @@ export default function Dashboard() {
 
             if (!lat || !lon) continue;
 
-            // Call geocoding utility
+            // 1. ADD RATE LIMITING DELAY
+            // Wait 1.1 seconds before every single geocoding call
+            await delay(1100); 
+
+            // 2. Perform Geocoding
             const city = await getCityName(lat, lon);
 
-            // ─── CRITICAL CHANGE: Wait 1 second after every geocoding call ───
-            // This prevents the 403 Forbidden error from Nominatim/CORS Proxy
-            await delay(1000);
-
+            // 3. Filtering Logic
             if (city === "Outside Pakistan" || city === "Unknown Region") continue;
 
-            batch.push({
+            results.push({
               date: d.toLocaleDateString(),
               time: d.toLocaleTimeString(),
               location: city,
               mag,
               depth: depth + " km",
-              lat,
-              lon,
+              lat, lon,
               status: mag >= 5 ? "High" : mag >= 3 ? "Moderate" : "Low",
             });
 
-            // Stop if we reached our target count for this batch
-            if (results.length + batch.length >= 10) break;
+            // Update UI incrementally so the user doesn't see a blank screen for 10 seconds
+            setRows([...results]); 
+            
           } catch (err) {
-            console.error("Error geocoding specific point:", err);
-            continue;
+            console.error("Geocoding failed for a specific point, skipping...", err);
+            continue; 
           }
         }
-
-        results.push(...batch);
-        offset += 50;
         
-        // Safety break to prevent infinite loops if data is scarce
-        if (offset > 500) break; 
+        offset += 50;
       }
 
-      setRows(results.slice(0, 10));
       setLastUpdated(new Date().toLocaleTimeString());
     } catch (err) {
-      console.error("Fetch Error:", err);
+      console.error("Global fetch error:", err);
     } finally {
       setLoading(false);
     }
   };
-
+  
   useEffect(() => {
     fetchQuakes();
     const interval = setInterval(fetchQuakes, 300000);
