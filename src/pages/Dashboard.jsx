@@ -5,7 +5,7 @@ import StatCard from "../components/Dashboard/StatCard";
 import Sidebar from "../components/Dashboard/Sidebar";
 import Header from "../components/Dashboard/Header";
 import EarthquakeMap from "../components/Dashboard/EarthquakeMap";
-import { getCityName } from "../utils/geocoding";
+// import { getCityName } from "../utils/geocoding";
 
 // Helper to wait between API calls to avoid 403 Forbidden
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
