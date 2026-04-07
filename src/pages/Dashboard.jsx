@@ -5,10 +5,50 @@ import StatCard from "../components/Dashboard/StatCard";
 import Sidebar from "../components/Dashboard/Sidebar";
 import Header from "../components/Dashboard/Header";
 import EarthquakeMap from "../components/Dashboard/EarthquakeMap";
-import { getCityName } from "../utils/geocoding";
+// import { getCityName } from "../utils/geocoding";
 
 // Helper to wait between API calls to avoid 403 Forbidden
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
+// ======= GEOCODING (inline) =======
+const cache = new Map();
+
+const getCityName = async (lat, lon) => {
+  const key = `${lat.toFixed(2)},${lon.toFixed(2)}`;
+  if (cache.has(key)) return cache.get(key);
+  let city = "Unknown Region";
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`,
+      { headers: { "User-Agent": "PakistanEarthquakeApp/1.0", "Accept-Language": "en" } }
+    );
+    const data = await res.json();
+    if (data?.address?.country_code !== "pk") {
+      cache.set(key, "Outside Pakistan");
+      return "Outside Pakistan";
+    }
+    const a = data.address;
+    city = a.city || a.town || a.village || a.municipality ||
+           a.state_district || a.county || a.state || "Pakistan";
+  } catch {
+    try {
+      const res2 = await fetch(
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
+      );
+      const data2 = await res2.json();
+      if (data2?.countryCode !== "PK") {
+        cache.set(key, "Outside Pakistan");
+        return "Outside Pakistan";
+      }
+      city = data2.city || data2.locality || data2.principalSubdivision || "Pakistan";
+    } catch {
+      city = "Unknown Region";
+    }
+  }
+  cache.set(key, city);
+  return city;
+};
+// ======= END GEOCODING =======
+
 
 export default function Dashboard() {
   const navigate = useNavigate();
