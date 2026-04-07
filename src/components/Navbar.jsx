@@ -8,9 +8,9 @@ export default function Navbar() {
 
   const links = [
     { label: "Home",      href: "/" },
-    { label: "Features",  href: "#features" },
-    { label: "About",     href: "#about" },
-    { label: "Contact",   href: "#contact" },
+    { label: "Platform Modules",  href: "#features" },
+    { label: "How it works",     href: "#about" },
+    { label: "Get in touch",   href: "#contact" },
   ];
 
   return (

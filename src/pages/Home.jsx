@@ -1,6 +1,6 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
-import earthImage from "../assets/earth.png";
 
 // ── Feature cards data ────────────────────────────────────────────────────
 const FEATURES = [
@@ -56,21 +56,66 @@ const FEATURES = [
 ];
 
 const STATS = [
-  { value: "99.2%",  label: "Model Accuracy" },
-  { value: "42+",    label: "Islamabad Sectors" },
-  { value: "<5s",    label: "Report Generation" },
+  { value: "99.2%",     label: "Model Accuracy" },
+  { value: "42+",       label: "Islamabad Sectors" },
+  { value: "<5s",       label: "Report Generation" },
   { value: "FEMA P-58", label: "Compliance Standard" },
 ];
 
 export default function Home() {
   const navigate = useNavigate();
 
+  // Contact form state
+  const [contact, setContact] = useState({ email: "", message: "" });
+  const [contactStatus, setContactStatus] = useState(null); // null | "sending" | "success" | "error"
+
+  const handleContactChange = (e) =>
+    setContact((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+
+  const handleContactSubmit = async () => {
+    if (!contact.email || !contact.message) return alert("Please fill in both fields.");
+
+    setContactStatus("sending");
+    try {
+      // Store in Google Sheets via a public Google Apps Script Web App endpoint.
+      // Replace the URL below with your deployed Apps Script URL.
+      // The script should accept POST with JSON { email, message, timestamp }.
+      const GOOGLE_SCRIPT_URL = import.meta.env.VITE_CONTACT_SCRIPT_URL || "";
+
+      const payload = {
+        email: contact.email,
+        message: contact.message,
+        timestamp: new Date().toISOString(),
+      };
+
+      if (GOOGLE_SCRIPT_URL) {
+        await fetch(GOOGLE_SCRIPT_URL, {
+          method: "POST",
+          mode: "no-cors",                       // Apps Script requires no-cors
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      // Always save locally as fallback / audit trail
+      const existing = JSON.parse(localStorage.getItem("qv_contacts") || "[]");
+      existing.push(payload);
+      localStorage.setItem("qv_contacts", JSON.stringify(existing));
+
+      setContactStatus("success");
+      setContact({ email: "", message: "" });
+    } catch (err) {
+      console.error(err);
+      setContactStatus("error");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F7F8FC] text-gray-800 font-sans overflow-x-hidden">
       <Navbar />
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <section className="relative pt-24 pb-0 min-h-screen flex flex-col overflow-hidden">
+      <section className="relative pt-20 pb-0 flex flex-col overflow-hidden">
 
         {/* Subtle grid background */}
         <div className="absolute inset-0 pointer-events-none"
@@ -91,9 +136,9 @@ export default function Home() {
         />
 
         {/* Hero text content */}
-        <div className="relative z-10 flex flex-col items-center text-center px-6 pt-10 pb-8">
+        <div className="relative z-10 flex flex-col items-center text-center px-6 pt-8 pb-8">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 bg-white border border-[#6B46C1]/20 rounded-full px-4 py-1.5 text-[11px] font-semibold text-[#6B46C1] shadow-sm mb-8 uppercase tracking-widest">
+          <div className="inline-flex items-center gap-2 bg-white border border-[#6B46C1]/20 rounded-full px-4 py-1.5 text-[11px] font-semibold text-[#6B46C1] shadow-sm mb-6 uppercase tracking-widest">
             <span className="w-1.5 h-1.5 rounded-full bg-[#6B46C1] animate-pulse" />
             AI-Powered Seismic Intelligence Platform
           </div>
@@ -102,7 +147,6 @@ export default function Home() {
             From tremors to{" "}
             <span className="relative inline-block">
               <span className="text-[#6B46C1]">trust</span>
-              {/* Underline decoration */}
               <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 200 8" preserveAspectRatio="none">
                 <path d="M0 6 Q50 0 100 5 Q150 10 200 4" stroke="#6B46C1" strokeWidth="2.5"
                   fill="none" strokeLinecap="round" opacity="0.5" />
@@ -115,14 +159,14 @@ export default function Home() {
             <span className="text-[#6B46C1]">protect.</span>
           </h2>
 
-          <p className="mt-7 max-w-lg text-gray-500 text-base leading-relaxed">
+          <p className="mt-6 max-w-lg text-gray-500 text-base leading-relaxed">
             An AI-powered platform for real-time seismic risk analysis, building
             vulnerability assessment, and structured disaster response planning —
             built for Pakistan's seismic landscape.
           </p>
 
           {/* CTA buttons */}
-          <div className="mt-9 flex items-center gap-4 flex-wrap justify-center">
+          <div className="mt-8 flex items-center gap-4 flex-wrap justify-center">
             <button
               onClick={() => navigate("/dashboard")}
               className="flex items-center gap-2 px-7 py-3.5 rounded-xl bg-[#6B46C1] text-white font-bold text-sm hover:bg-[#5a38a8] transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
@@ -135,7 +179,7 @@ export default function Home() {
           </div>
 
           {/* Stats row */}
-          <div className="mt-14 flex items-center gap-8 flex-wrap justify-center">
+          <div className="mt-10 flex items-center gap-8 flex-wrap justify-center">
             {STATS.map((s, i) => (
               <div key={i} className="text-center">
                 <div className="text-2xl font-black text-[#6B46C1]">{s.value}</div>
@@ -144,26 +188,10 @@ export default function Home() {
             ))}
           </div>
         </div>
-
-        {/* Earth image — bottom, large, atmospheric */}
-        {/* <div className="relative mt-4 flex justify-center"> */}
-          {/* Gradient fade over earth */}
-          {/* <div className="absolute inset-x-0 top-0 h-32 z-10"
-            style={{ background: "linear-gradient(to bottom, #F7F8FC, transparent)" }} /> */}
-          {/* <img
-            src={earthImage}
-            alt="Earth"
-            className="w-full max-w-4xl object-contain opacity-80 select-none"
-            style={{ filter: "saturate(0.7) brightness(0.95)" }}
-          /> */}
-          {/* Bottom fade */}
-          {/* <div className="absolute inset-x-0 bottom-0 h-40 z-10"
-            style={{ background: "linear-gradient(to top, #F7F8FC, transparent)" }} />
-        </div> */}
       </section>
 
       {/* ── FEATURES ─────────────────────────────────────────────────────── */}
-      <section id="features" className="px-8 py-20 max-w-6xl mx-auto">
+      <section id="features" className="px-8 py-16 max-w-6xl mx-auto">
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 bg-[#6B46C1]/8 border border-[#6B46C1]/20 rounded-full px-4 py-1.5 text-[11px] font-bold text-[#6B46C1] uppercase tracking-widest mb-4">
             Platform Modules
@@ -188,20 +216,13 @@ export default function Home() {
               </div>
               <h3 className="text-base font-bold text-gray-900 mb-1.5">{f.title}</h3>
               <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
-              {/* <div className="mt-4 flex items-center gap-1 text-xs font-semibold opacity-0 group-hover:opacity-100 transition-all"
-                style={{ color: f.color }}>
-                Learn more
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </div> */}
             </div>
           ))}
         </div>
       </section>
 
       {/* ── HOW IT WORKS ──────────────────────────────────────────────────── */}
-      <section id="about" className="bg-white border-y border-gray-200 py-20 px-8">
+      <section id="about" className="bg-white border-y border-gray-200 py-16 px-8">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 bg-[#6B46C1]/8 border border-[#6B46C1]/20 rounded-full px-4 py-1.5 text-[11px] font-bold text-[#6B46C1] uppercase tracking-widest mb-4">
@@ -222,7 +243,6 @@ export default function Home() {
               { step: "04", title: "Act",          desc: "Receive a structured report with cost plans and timelines.",      icon: "📋" },
             ].map((s, i) => (
               <div key={i} className="relative">
-                {/* Connector line */}
                 {i < 3 && (
                   <div className="hidden md:block absolute top-6 left-full w-full h-px bg-gradient-to-r from-[#6B46C1]/30 to-transparent z-0" />
                 )}
@@ -241,10 +261,10 @@ export default function Home() {
       </section>
 
       {/* ── CTA BANNER ────────────────────────────────────────────────────── */}
-      <section className="py-20 px-8">
-        <div className="max-w-3xl mx-auto text-center">
+      <section className="py-16 px-8">
+        <div className="max-w-4xl mx-auto text-center">
           <div className="bg-white rounded-3xl border border-gray-200 shadow-sm p-12 relative overflow-hidden">
-            {/* Decorative blob */}
+            {/* Decorative blobs */}
             <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full pointer-events-none"
               style={{ background: "radial-gradient(circle, rgba(107,70,193,0.12) 0%, transparent 70%)" }} />
             <div className="absolute -bottom-12 -left-12 w-48 h-48 rounded-full pointer-events-none"
@@ -260,18 +280,131 @@ export default function Home() {
                 Join planners, homeowners, and developers using QuakeVision to make
                 data-driven decisions about structural safety.
               </p>
-              <div className="flex items-center gap-4 justify-center flex-wrap">
+
+              {/* 4 CTA buttons */}
+              <div className="flex items-center gap-3 justify-center flex-wrap">
                 <button
                   onClick={() => navigate("/risk-simulator")}
-                  className="px-8 py-3.5 rounded-xl bg-[#6B46C1] text-white font-bold text-sm hover:bg-[#5a38a8] transition-all shadow-lg hover:shadow-xl">
-                   Assess Damage and Risk
+                  className="px-6 py-3.5 rounded-xl bg-[#6B46C1] text-white font-bold text-sm hover:bg-[#5a38a8] transition-all shadow-lg hover:shadow-xl">
+                  Assess Damage & Risk
                 </button>
                 <button
                   onClick={() => navigate("/home-safety")}
-                  className="px-8 py-3.5 rounded-xl bg-white border-2 border-gray-200 text-gray-700 font-bold text-sm hover:border-[#6B46C1]/40 hover:text-[#6B46C1] transition-all">
+                  className="px-6 py-3.5 rounded-xl bg-white border-2 border-gray-200 text-gray-700 font-bold text-sm hover:border-[#6B46C1]/40 hover:text-[#6B46C1] transition-all">
                   Home Safety Report
                 </button>
+                <button
+                  onClick={() => navigate("/developer")}
+                  className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white border-2 border-gray-200 text-gray-700 font-bold text-sm hover:border-blue-400 hover:text-blue-600 transition-all">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                  </svg>
+                  Developer Plan
+                </button>
+                <button
+                  onClick={() => navigate("/government")}
+                  className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white border-2 border-gray-200 text-gray-700 font-bold text-sm hover:border-emerald-400 hover:text-emerald-600 transition-all">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                  Government Portal
+                </button>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── CONTACT ──────────────────────────────────────────────────────── */}
+      <section id="contact" className="bg-white border-t border-gray-200 py-16 px-8">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center mb-10">
+            <div className="inline-flex items-center gap-2 bg-[#6B46C1]/8 border border-[#6B46C1]/20 rounded-full px-4 py-1.5 text-[11px] font-bold text-[#6B46C1] uppercase tracking-widest mb-4">
+              Get In Touch
+            </div>
+            <h2 className="text-4xl font-black text-gray-900">
+              Have questions or
+              <span className="text-[#6B46C1]"> feedback?</span>
+            </h2>
+            <p className="text-gray-500 mt-3 text-sm leading-relaxed">
+              Whether you're a researcher, government official, or homeowner — we'd love to hear from you.
+            </p>
+          </div>
+
+          <div className="bg-[#F7F8FC] rounded-2xl border border-gray-200 p-8">
+            <div className="space-y-4">
+              {/* Email field */}
+              <div>
+                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={contact.email}
+                  onChange={handleContactChange}
+                  placeholder="you@example.com"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6B46C1]/30 focus:border-[#6B46C1]/50 transition-all"
+                />
+              </div>
+
+              {/* Message field */}
+              <div>
+                <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">
+                  Message
+                </label>
+                <textarea
+                  name="message"
+                  value={contact.message}
+                  onChange={handleContactChange}
+                  rows={5}
+                  placeholder="Tell us about your use case, feedback, or questions..."
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#6B46C1]/30 focus:border-[#6B46C1]/50 transition-all resize-none"
+                />
+              </div>
+
+              {/* Submit */}
+              <button
+                onClick={handleContactSubmit}
+                disabled={contactStatus === "sending"}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[#6B46C1] text-white font-bold text-sm hover:bg-[#5a38a8] disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg"
+              >
+                {contactStatus === "sending" ? (
+                  <>
+                    <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                    </svg>
+                    Send Message
+                  </>
+                )}
+              </button>
+
+              {/* Status messages */}
+              {contactStatus === "success" && (
+                <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm font-medium">
+                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Message sent! We'll get back to you soon.
+                </div>
+              )}
+              {contactStatus === "error" && (
+                <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm font-medium">
+                  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Something went wrong. Please try again.
+                </div>
+              )}
             </div>
           </div>
         </div>

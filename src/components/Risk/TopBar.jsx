@@ -3,9 +3,9 @@ export default function TopBar({ results, loading, onRun, onDownload }) {
     <header className="bg-white border-b border-gray-200 px-8 py-3 flex items-center justify-between shrink-0">
       <div>
         <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-3 py-1 rounded-full bg-[#6B46C1]/10 border border-[#6B46C1]/20 text-[#6B46C1] uppercase tracking-wider mb-1">
-          ⚡ Damage Predictor
+          ⚡ Risk Simulation
         </span>
-        <h1 className="text-xl font-black text-gray-900 leading-tight">Risk Simulation</h1>
+        <h1 className="text-xl font-black text-gray-900 leading-tight">Damage Predictor</h1>
         <p className="text-xs text-gray-400">Earthquake impact and damage prediction</p>
       </div>
 

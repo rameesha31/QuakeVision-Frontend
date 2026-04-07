@@ -81,7 +81,7 @@ export default function DeveloperInput({ onGenerate, loading }) {
             <span className="text-xs text-gray-400 uppercase tracking-widest">Feasibility Engine</span>
           </div>
           <h1 className="text-4xl font-black text-gray-900 leading-none">
-            Real Estate <span className="text-[#6B46C1] italic">Feasibility</span>
+            Developer <span className="text-[#6B46C1] italic">Plan</span>
           </h1>
           <p className="text-sm text-gray-400 mt-2">
             Configure site parameters to run seismic feasibility analysis.

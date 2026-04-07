@@ -51,7 +51,13 @@ export default function InputSideBar({ formData, onChange, results }) {
           Configure earthquake parameters to run impact analysis.
         </p>
       </div>
-
+{/* Info box at bottom */}
+      <div className="mt-auto bg-[#6B46C1]/5 border border-[#6B46C1]/15 rounded-xl p-3">
+        <p className="text-[10px] font-bold text-[#6B46C1] mb-1 uppercase tracking-wider">How it works</p>
+        <p className="text-[10px] text-gray-500 leading-relaxed">
+          Enter city names and seismic parameters. The model predicts PGA, damage level, and recommended actions.
+        </p>
+      </div>
       {/* Divider */}
       <div className="h-px bg-gray-100" />
 
@@ -84,14 +90,6 @@ export default function InputSideBar({ formData, onChange, results }) {
             )}
           </div>
         ))}
-      </div>
-
-      {/* Info box at bottom */}
-      <div className="mt-auto bg-[#6B46C1]/5 border border-[#6B46C1]/15 rounded-xl p-3">
-        <p className="text-[10px] font-bold text-[#6B46C1] mb-1 uppercase tracking-wider">How it works</p>
-        <p className="text-[10px] text-gray-500 leading-relaxed">
-          Enter city names and seismic parameters. The model predicts PGA, damage level, and recommended actions.
-        </p>
       </div>
 
     </aside>

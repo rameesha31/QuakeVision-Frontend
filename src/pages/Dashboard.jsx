@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Activity, AlertTriangle, RefreshCw } from "lucide-react";
 import StatCard from "../components/Dashboard/StatCard";
 import Sidebar from "../components/Dashboard/Sidebar";
@@ -8,10 +9,12 @@ import EventsTable from "../components/Dashboard/EventsTable";
 import { getCityName } from "../utils/geocoding";
 
 export default function Dashboard() {
-  const [rows, setRows]                   = useState([]);
+  const navigate = useNavigate();
+
+  const [rows, setRows]                         = useState([]);
   const [selectedLocation, setSelectedLocation] = useState(null);
-  const [loading, setLoading]             = useState(true);
-  const [lastUpdated, setLastUpdated]     = useState(null);
+  const [loading, setLoading]                   = useState(true);
+  const [lastUpdated, setLastUpdated]           = useState(null);
 
   const fetchQuakes = async () => {
     setLoading(true);
@@ -83,6 +86,18 @@ export default function Dashboard() {
 
         {/* ── TOP BAR ── */}
         <div className="bg-white border-b border-gray-200 px-6 py-4 shrink-0">
+          {/* Back buttons */}
+          <div className="flex items-center gap-3 mb-3">
+            <button
+              onClick={() => navigate("/")}
+              className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#6B46C1] transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to Home
+            </button>
+          </div>
           <Header />
         </div>
 
@@ -114,13 +129,13 @@ export default function Dashboard() {
             />
           </div>
 
-          {/* Map + Events */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
+          {/* Map + Events — side by side, same height */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start">
 
             {/* Map card */}
-            <div className="lg:col-span-3 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+            <div className="lg:col-span-3 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
               {/* Map header */}
-              <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
+              <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 shrink-0">
                 <div>
                   <p className="text-[10px] font-bold uppercase tracking-widest text-[#6B46C1] mb-0.5">
                     USGS Data
@@ -148,7 +163,7 @@ export default function Dashboard() {
               </div>
 
               {/* Map legend */}
-              <div className="flex items-center gap-4 px-5 py-2 bg-gray-50 border-b border-gray-100">
+              <div className="flex items-center gap-4 px-5 py-2 bg-gray-50 border-b border-gray-100 shrink-0">
                 {[
                   { color: "#EF4444", label: "High (≥5.0)" },
                   { color: "#F59E0B", label: "Moderate (3–5)" },
@@ -161,73 +176,99 @@ export default function Dashboard() {
                 ))}
               </div>
 
-              {/* Map */}
+              {/* Map — height synced with events panel (≈500px) */}
               <div className="h-[430px]">
                 <EarthquakeMap rows={rows} selectedLocation={selectedLocation} />
               </div>
             </div>
 
-            {/* Events panel */}
+            {/* Events panel — same total visual height */}
             <div className="lg:col-span-1">
-              <EventsTable rows={rows} onSelect={setSelectedLocation} />
+              <EventsTableFull rows={rows} onSelect={setSelectedLocation} />
             </div>
           </div>
 
-          {/* Summary table */}
-          {/* {rows.length > 0 && (
-            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#6B46C1] mb-0.5">
-                  Data Table
-                </p>
-                <h3 className="text-sm font-black text-gray-900">Historic Seismic Events</h3>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="bg-gray-50 border-b border-gray-200">
-                      {["Date", "Time", "Location", "Magnitude", "Depth", "Status"].map(h => (
-                        <th key={h}
-                          className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500">
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {rows.map((r, i) => {
-                      const statusCls =
-                        r.mag >= 5  ? "bg-red-50 text-red-600 border-red-200"    :
-                        r.mag >= 3  ? "bg-amber-50 text-amber-600 border-amber-200" :
-                        "bg-green-50 text-green-600 border-green-200";
-                      return (
-                        <tr key={i}
-                          onClick={() => setSelectedLocation(r)}
-                          className="hover:bg-[#6B46C1]/5 cursor-pointer transition-all">
-                          <td className="px-4 py-3 text-gray-600">{r.date}</td>
-                          <td className="px-4 py-3 text-gray-400">{r.time}</td>
-                          <td className="px-4 py-3 font-medium text-gray-800">{r.location}</td>
-                          <td className="px-4 py-3">
-                            <span className="font-black text-[#6B46C1]">{r.mag}</span>
-                            <span className="text-gray-400 ml-1">Mw</span>
-                          </td>
-                          <td className="px-4 py-3 text-gray-500">{r.depth}</td>
-                          <td className="px-4 py-3">
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusCls}`}>
-                              {r.status}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )} */}
-
         </div>
       </main>
+    </div>
+  );
+}
+
+// ── Inline EventsTable with full location names ───────────────────────────
+function EventsTableFull({ rows, onSelect }) {
+  const magMeta = (mag) => {
+    if (mag >= 5) return { color: "#EF4444", bg: "#FEF2F2", label: "High",     border: "#FECACA" };
+    if (mag >= 3) return { color: "#F59E0B", bg: "#FFFBEB", label: "Moderate", border: "#FDE68A" };
+    return          { color: "#10B981", bg: "#ECFDF5", label: "Low",      border: "#A7F3D0" };
+  };
+
+  return (
+    // Height matches the map card: header(~56) + legend(~34) + map(430) = 520px total
+    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm flex flex-col" style={{ height: "520px" }}>
+
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-gray-100 shrink-0">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#6B46C1] mb-0.5">
+              Live Feed
+            </p>
+            <h3 className="font-black text-gray-900 text-sm">Recent Events</h3>
+          </div>
+          <span className="flex items-center gap-1.5 text-[10px] font-semibold text-green-600 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            Updating
+          </span>
+        </div>
+      </div>
+
+      {/* Scrollable list */}
+      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
+        {rows.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center text-xl">🌍</div>
+            <p className="text-sm text-gray-400 font-medium">Fetching seismic data...</p>
+          </div>
+        ) : (
+          rows.map((r, i) => {
+            const m = magMeta(r.mag);
+            return (
+              <div
+                key={i}
+                onClick={() => onSelect(r)}
+                className="group flex items-start gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50/60 hover:bg-[#6B46C1]/5 hover:border-[#6B46C1]/20 cursor-pointer transition-all"
+              >
+                {/* Mag badge */}
+                <div className="shrink-0 flex flex-col items-center justify-center w-11 h-11 rounded-xl border"
+                  style={{ background: m.bg, borderColor: m.border }}>
+                  <span className="text-sm font-black leading-none" style={{ color: m.color }}>
+                    {r.mag}
+                  </span>
+                  <span className="text-[8px] font-bold uppercase mt-0.5" style={{ color: m.color }}>
+                    Mw
+                  </span>
+                </div>
+
+                {/* Info — location NOT truncated */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2 mb-0.5">
+                    {/* Break long place names instead of truncating */}
+                    <p className="text-xs font-bold text-gray-800 break-words leading-snug">
+                      {r.location}
+                    </p>
+                    <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
+                      style={{ background: m.bg, color: m.color, border: `1px solid ${m.border}` }}>
+                      {m.label}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-gray-400">{r.date} · {r.time}</p>
+                  <p className="text-[10px] text-gray-400">Depth: {r.depth}</p>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }

@@ -71,7 +71,7 @@ export default function GovInput({ onGenerate, loading }) {
             <span className="text-xs text-gray-400 uppercase tracking-widest">Urban Policy Engine</span>
           </div>
           <h1 className="text-4xl font-black text-gray-900 leading-none">
-            Urban <span className="text-[#6B46C1] italic">Resilience</span>
+            Government <span className="text-[#6B46C1] italic">Strategy Plan</span>
           </h1>
           <p className="text-sm text-gray-400 mt-2">
             Configure sector parameters for seismic retrofit policy planning.
