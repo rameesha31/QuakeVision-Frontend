@@ -5,60 +5,65 @@ import StatCard from "../components/Dashboard/StatCard";
 import Sidebar from "../components/Dashboard/Sidebar";
 import Header from "../components/Dashboard/Header";
 import EarthquakeMap from "../components/Dashboard/EarthquakeMap";
-// import { getCityName } from "../utils/geocoding";
 
-// Helper to wait between API calls to avoid 403 Forbidden
+// ============ UTILS ============
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
-// ======= GEOCODING (inline) =======
+
 const cache = new Map();
 
-const getCityName = async (lat, lon) => {
+async function getCityName(lat, lon) {
   const key = `${lat.toFixed(2)},${lon.toFixed(2)}`;
   if (cache.has(key)) return cache.get(key);
+
   let city = "Unknown Region";
+
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`,
       { headers: { "User-Agent": "PakistanEarthquakeApp/1.0", "Accept-Language": "en" } }
     );
     const data = await res.json();
+
     if (data?.address?.country_code !== "pk") {
       cache.set(key, "Outside Pakistan");
       return "Outside Pakistan";
     }
+
     const a = data.address;
     city = a.city || a.town || a.village || a.municipality ||
            a.state_district || a.county || a.state || "Pakistan";
+
   } catch {
     try {
       const res2 = await fetch(
         `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
       );
       const data2 = await res2.json();
+
       if (data2?.countryCode !== "PK") {
         cache.set(key, "Outside Pakistan");
         return "Outside Pakistan";
       }
+
       city = data2.city || data2.locality || data2.principalSubdivision || "Pakistan";
     } catch {
       city = "Unknown Region";
     }
   }
+
   cache.set(key, city);
   return city;
-};
-// ======= END GEOCODING =======
-
+}
+// ============ END UTILS ============
 
 export default function Dashboard() {
   const navigate = useNavigate();
-
   const [rows, setRows] = useState([]);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState(null);
 
-const fetchQuakes = async () => {
+  const fetchQuakes = async () => {
     setLoading(true);
     try {
       const now = new Date();
@@ -69,19 +74,15 @@ const fetchQuakes = async () => {
       let results = [];
       let offset = 1;
 
-      // --- NEW: Helper function for manual delay ---
-      const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
       while (results.length < 10) {
-        const url = https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=${startDate}&orderby=time&minlatitude=23.5&maxlatitude=37.1&minlongitude=60.5&maxlongitude=77.8&limit=50&offset=${offset};
+        const url = `https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=${startDate}&orderby=time&minlatitude=23.5&maxlatitude=37.1&minlongitude=60.5&maxlongitude=77.8&limit=50&offset=${offset}`;
         const res = await fetch(url);
         const data = await res.json();
-        
+
         if (!data.features || !data.features.length) break;
 
-        // --- NEW: Sequential Loop instead of Promise.all ---
         for (const ev of data.features) {
-          if (results.length >= 10) break; // Stop once we have 10 valid quakes
+          if (results.length >= 10) break;
 
           try {
             const lat = ev.geometry.coordinates[1];
@@ -92,14 +93,10 @@ const fetchQuakes = async () => {
 
             if (!lat || !lon) continue;
 
-            // 1. ADD RATE LIMITING DELAY
-            // Wait 1.1 seconds before every single geocoding call
-            await delay(1100); 
+            await delay(1100);
 
-            // 2. Perform Geocoding
             const city = await getCityName(lat, lon);
 
-            // 3. Filtering Logic
             if (city === "Outside Pakistan" || city === "Unknown Region") continue;
 
             results.push({
@@ -108,19 +105,19 @@ const fetchQuakes = async () => {
               location: city,
               mag,
               depth: depth + " km",
-              lat, lon,
+              lat,
+              lon,
               status: mag >= 5 ? "High" : mag >= 3 ? "Moderate" : "Low",
             });
 
-            // Update UI incrementally so the user doesn't see a blank screen for 10 seconds
-            setRows([...results]); 
-            
+            setRows([...results]);
+
           } catch (err) {
-            console.error("Geocoding failed for a specific point, skipping...", err);
-            continue; 
+            console.error("Error geocoding specific point:", err);
+            continue;
           }
         }
-        
+
         offset += 50;
       }
 
@@ -131,7 +128,7 @@ const fetchQuakes = async () => {
       setLoading(false);
     }
   };
-  
+
   useEffect(() => {
     fetchQuakes();
     const interval = setInterval(fetchQuakes, 300000);
@@ -161,27 +158,9 @@ const fetchQuakes = async () => {
 
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl">
-            <StatCard
-              icon={<Activity size={16} />}
-              color="purple"
-              title="Seismic Monitoring"
-              value="Live"
-              sub="Pakistan Region"
-            />
-            <StatCard
-              icon={<AlertTriangle size={16} />}
-              color="red"
-              title="Recent Events"
-              value={loading ? "—" : rows.length}
-              sub="Last 2 years · Pakistan"
-            />
-            <StatCard
-              icon={<AlertTriangle size={16} />}
-              color="blue"
-              title="High Risk Events"
-              value={loading ? "—" : highCount}
-              sub="Magnitude ≥ 5.0"
-            />
+            <StatCard icon={<Activity size={16} />} color="purple" title="Seismic Monitoring" value="Live" sub="Pakistan Region" />
+            <StatCard icon={<AlertTriangle size={16} />} color="red" title="Recent Events" value={loading ? "—" : rows.length} sub="Last 2 years · Pakistan" />
+            <StatCard icon={<AlertTriangle size={16} />} color="blue" title="High Risk Events" value={loading ? "—" : highCount} sub="Magnitude ≥ 5.0" />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start">
@@ -277,7 +256,6 @@ function EventsTableFull({ rows, onSelect }) {
                   <span className="text-sm font-black leading-none" style={{ color: m.color }}>{r.mag}</span>
                   <span className="text-[8px] font-bold uppercase mt-0.5" style={{ color: m.color }}>Mw</span>
                 </div>
-
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2 mb-0.5">
                     <p className="text-xs font-bold text-gray-800 break-words leading-snug">{r.location}</p>
