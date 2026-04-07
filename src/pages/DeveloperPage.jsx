@@ -113,7 +113,9 @@ export default function DeveloperPage() {
             <DevDashboard reportData={reportData} sessionId={sessionId} onBack={() => setPage("input")} />
           )}
         </div>
-        <DevChatbot sessionId={sessionId} reportData={reportData} />
+        {/* <DevChatbot sessionId={sessionId} reportData={reportData} /> */}
+        <DevChatbot sessionId={sessionId} reportData={reportData} onReportUpdate={(newData) => setReportData(newData)} />
+        
       </div>
     </div>
   );

@@ -109,7 +109,9 @@ return (
             <GovDashboard reportData={reportData} sessionId={sessionId} onBack={() => setPage("input")} />
           )}
         </div>
-        <GovChatbot sessionId={sessionId} reportData={reportData} />
+        {/* <GovChatbot sessionId={sessionId} reportData={reportData} /> */}
+        <GovChatbot sessionId={sessionId} reportData={reportData} onReportUpdate={(newData) => setReportData(newData)} />
+        
       </div>
     </div>
   );

@@ -105,7 +105,8 @@ export default function HomeSafetyPage() {
             <HomeDashboard reportData={reportData} sessionId={sessionId} onBack={() => setPage("input")} />
           )}
         </div>
-        <HomeChatbot sessionId={sessionId} reportData={reportData} />
+        {/* <HomeChatbot sessionId={sessionId} reportData={reportData} /> */}
+        <HomeChatbot sessionId={sessionId} reportData={reportData} onReportUpdate={(newData) => setReportData(newData)} />
       </div>
     </div>
   );
