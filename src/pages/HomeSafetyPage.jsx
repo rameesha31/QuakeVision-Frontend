@@ -5,12 +5,11 @@ import HomeInput from "../components/HomeSafetyPage/HomeInput";
 import HomeDashboard from "../components/HomeSafetyPage/HomeDashboard";
 import LoadingOverlay from "../components/HomeSafetyPage/LoadingOverlay";
 import HomeChatbot from "../components/HomeSafetyPage/HomeChatbot";
-
-const API_BASE = "http://localhost:8000/api/v1";
+import { api } from '../utils/api';
 
 export default function HomeSafetyPage() {
   const navigate = useNavigate();
-  const [page, setPage]               = useState("input");       // "input" | "dashboard"
+  const [page, setPage]               = useState("input");
   const [loading, setLoading]         = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [reportData, setReportData]   = useState(null);
@@ -51,14 +50,7 @@ export default function HomeSafetyPage() {
         sector_name:       formData.sector_name,
       };
 
-      const res = await fetch(`${API_BASE}/report/home`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(payload),
-      });
-
-      if (!res.ok) throw new Error(`API error: ${res.status}`);
-      const data = await res.json();
+      const data = await api.post('/api/v1/report/home', payload);
 
       clearInterval(interval);
       setLoadingStep(PIPELINE_MSGS.length - 1);
@@ -74,13 +66,12 @@ export default function HomeSafetyPage() {
     }
   };
 
-   return (
+  return (
     <div className="flex h-screen w-full overflow-hidden bg-[#F7F8FC] text-gray-800">
       <Sidebar />
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 flex flex-col overflow-hidden relative">
 
-          {/* ── Back to Dashboard bar ── */}
           <div className="bg-white border-b border-gray-100 px-5 py-2 flex items-center gap-3 shrink-0">
             <span className="text-gray-300 text-xs">|</span>
             <button
@@ -105,8 +96,7 @@ export default function HomeSafetyPage() {
             <HomeDashboard reportData={reportData} sessionId={sessionId} onBack={() => setPage("input")} />
           )}
         </div>
-        {/* <HomeChatbot sessionId={sessionId} reportData={reportData} /> */}
-        <HomeChatbot sessionId={sessionId} reportData={reportData} onReportUpdate={(newData) => setReportData(newData)} />
+        <HomeChatbot sessionId={sessionId} reportData={reportData} />
       </div>
     </div>
   );
