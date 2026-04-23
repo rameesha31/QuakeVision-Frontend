@@ -38,4 +38,3 @@ export const getCityName = async (lat, lon) => {
     return "Unknown Region";
   }
 };
-
