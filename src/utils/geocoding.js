@@ -1,53 +1,68 @@
 const cache = new Map();
 
-const fetchNominatim = async (lat, lon) => {
-  const res = await fetch(
-    `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`,
-    { headers: { "User-Agent": "PakistanEarthquakeApp/1.0", "Accept-Language": "en" } }
-  );
-  if (!res.ok) throw new Error("Nominatim failed");
-  return res.json();
-};
-
-const fetchBigDataCloud = async (lat, lon) => {
-  const res = await fetch(
-    `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
-  );
-  if (!res.ok) throw new Error("BigDataCloud failed");
-  return res.json();
-};
+// Optional: limit cache size (prevents memory leaks in long sessions)
+const MAX_CACHE_SIZE = 500;
 
 export const getCityName = async (lat, lon) => {
+  if (!lat || !lon) return "Unknown Region";
+
+  // Round to reduce duplicate calls (smart move already)
   const key = `${lat.toFixed(2)},${lon.toFixed(2)}`;
+
+  // ✅ Return from cache if exists
   if (cache.has(key)) return cache.get(key);
 
-  let city = "Unknown Region";
-
   try {
-    const data = await fetchNominatim(lat, lon);
-    if (data?.address?.country_code !== "pk") {
+    const res = await fetch(
+      `${import.meta.env.VITE_API_BASE_URL}/api/v1/reverse-geocode?lat=${lat}&lon=${lon}`
+    );
+
+    // ❌ Handle bad responses properly
+    if (!res.ok) {
+      throw new Error(`API error: ${res.status}`);
+    }
+
+    const data = await res.json();
+
+    if (!data || !data.address) {
+      cache.set(key, "Unknown Region");
+      return "Unknown Region";
+    }
+
+    const a = data.address;
+
+    // ✅ Filter only Pakistan
+    if (a.country_code !== "pk") {
       cache.set(key, "Outside Pakistan");
       return "Outside Pakistan";
     }
-    const a = data.address;
-    city = a.city || a.town || a.village || a.municipality ||
-           a.state_district || a.county || a.state || "Pakistan";
+
+    // ✅ Smart fallback chain for location naming
+    const city =
+      a.city ||
+      a.town ||
+      a.village ||
+      a.municipality ||
+      a.state_district ||
+      a.county ||
+      a.state ||
+      "Pakistan";
+
+    // ✅ Maintain cache size (simple eviction)
+    if (cache.size >= MAX_CACHE_SIZE) {
+      const firstKey = cache.keys().next().value;
+      cache.delete(firstKey);
+    }
+
+    cache.set(key, city);
+    return city;
 
   } catch (err) {
-    console.warn("Nominatim failed, trying fallback...");
-    try {
-      const data = await fetchBigDataCloud(lat, lon);
-      if (data?.countryCode !== "PK") {
-        cache.set(key, "Outside Pakistan");
-        return "Outside Pakistan";
-      }
-      city = data.city || data.locality || data.principalSubdivision || "Pakistan";
-    } catch (err2) {
-      console.error("Both geocoding APIs failed:", err2);
-      city = "Unknown Region";
-    }
-  }
+    console.error("Reverse geocoding failed:", err);
 
-  cache.set(key, city);
-  return city;
+    // Cache failures too (prevents repeated failing calls)
+    cache.set(key, "Unknown Region");
+
+    return "Unknown Region";
+  }
 };
