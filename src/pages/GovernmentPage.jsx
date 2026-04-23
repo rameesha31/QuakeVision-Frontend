@@ -5,8 +5,7 @@ import GovInput from "../components/GovtPage/GovInput";
 import GovDashboard from "../components/GovtPage/GovtDashboard";
 import GovChatbot from "../components/GovtPage/GovChatbot";
 import LoadingOverlay from "../components/HomeSafetyPage/LoadingOverlay";
-
-const API_BASE = "http://localhost:8000/api/v1";
+import { api } from '../utils/api';
 
 export default function GovernmentPage() {
   const navigate = useNavigate();
@@ -36,7 +35,6 @@ export default function GovernmentPage() {
     }, 1100);
 
     try {
-      // Exact flat schema — no sector_data nesting
       const payload = {
         city_name:         formData.city_name,
         sector_name:       formData.sector_name,
@@ -52,18 +50,8 @@ export default function GovernmentPage() {
         allow_web:         formData.allow_web,
       };
 
-      const res = await fetch(`${API_BASE}/report/gov`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(payload),
-      });
+      const data = await api.post('/api/v1/report/gov', payload);
 
-      if (!res.ok) {
-        const errBody = await res.json().catch(() => ({}));
-        throw new Error(`API ${res.status}: ${JSON.stringify(errBody?.detail || errBody)}`);
-      }
-
-      const data = await res.json();
       clearInterval(interval);
       setLoadingStep(PIPELINE_MSGS.length - 1);
       setReportData(data);
@@ -78,13 +66,12 @@ export default function GovernmentPage() {
     }
   };
 
-return (
+  return (
     <div className="flex h-screen w-full overflow-hidden bg-[#F7F8FC] text-gray-800">
       <Sidebar />
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 flex flex-col overflow-hidden relative">
 
-          {/* ── Back to Dashboard bar ── */}
           <div className="bg-white border-b border-gray-100 px-5 py-2 flex items-center gap-3 shrink-0">
             <span className="text-gray-300 text-xs">|</span>
             <button
@@ -109,9 +96,7 @@ return (
             <GovDashboard reportData={reportData} sessionId={sessionId} onBack={() => setPage("input")} />
           )}
         </div>
-        {/* <GovChatbot sessionId={sessionId} reportData={reportData} /> */}
-        <GovChatbot sessionId={sessionId} reportData={reportData} onReportUpdate={(newData) => setReportData(newData)} />
-        
+        <GovChatbot sessionId={sessionId} reportData={reportData} />
       </div>
     </div>
   );
