@@ -5,8 +5,7 @@ import DevInput from "../components/DeveloperPage/DeveloperInput";
 import DevDashboard from "../components/DeveloperPage/DeveloperDashboard";
 import DevChatbot from "../components/DeveloperPage/Devchatbot";
 import LoadingOverlay from "../components/HomeSafetyPage/LoadingOverlay";
-
-const API_BASE = "http://localhost:8000/api/v1";
+import { api } from '../utils/api';
 
 export default function DeveloperPage() {
   const navigate = useNavigate();
@@ -36,14 +35,9 @@ export default function DeveloperPage() {
     }, 1100);
 
     try {
-      // Payload matches DevReportRequest schema exactly:
-      // magnitude, site_sector, project_type, project_name,
-      // building_type, budget_level, timeline_value, timeline_unit,
-      // project_size_sqft, floors, allow_web
-      // risk_map is built server-side — do NOT send it from frontend
       const payload = {
         magnitude:         formData.magnitude,
-        site_sector:       formData.site_sector,   // string e.g. "SECTOR F-07"
+        site_sector:       formData.site_sector,
         project_name:      formData.project_name,
         project_type:      formData.project_type,
         building_type:     formData.building_type,
@@ -56,18 +50,8 @@ export default function DeveloperPage() {
         city_name:         formData.city_name,
       };
 
-      const res = await fetch(`${API_BASE}/report/dev`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify(payload),
-      });
+      const data = await api.post('/api/v1/report/dev', payload);
 
-      if (!res.ok) {
-        const errBody = await res.json().catch(() => ({}));
-        throw new Error(`API ${res.status}: ${JSON.stringify(errBody?.detail || errBody)}`);
-      }
-
-      const data = await res.json();
       clearInterval(interval);
       setLoadingStep(PIPELINE_MSGS.length - 1);
       setReportData(data);
@@ -88,7 +72,6 @@ export default function DeveloperPage() {
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 flex flex-col overflow-hidden relative">
 
-          {/* ── Back to Dashboard bar ── */}
           <div className="bg-white border-b border-gray-100 px-5 py-2 flex items-center gap-3 shrink-0">
             <span className="text-gray-300 text-xs">|</span>
             <button
@@ -113,9 +96,7 @@ export default function DeveloperPage() {
             <DevDashboard reportData={reportData} sessionId={sessionId} onBack={() => setPage("input")} />
           )}
         </div>
-        {/* <DevChatbot sessionId={sessionId} reportData={reportData} /> */}
-        <DevChatbot sessionId={sessionId} reportData={reportData} onReportUpdate={(newData) => setReportData(newData)} />
-        
+        <DevChatbot sessionId={sessionId} reportData={reportData} />
       </div>
     </div>
   );
