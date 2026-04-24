@@ -6,7 +6,8 @@ import InputSideBar from "../components/Risk/InputSideBar";
 import ReportCards from "../components/Risk/ReportCards";
 import TrendGraphs from "../components/Risk/TrendsGraph";
 import { generatePDF } from "../components/Risk/DownloadPdf";
-import { api } from '../utils/api';
+
+const API_BASE = "https://kashafimaan-quakevisionfyp-backend.hf.space";
 
 export default function RiskSimulator() {
   const navigate = useNavigate();
@@ -14,10 +15,11 @@ export default function RiskSimulator() {
   const [formData, setFormData] = useState({
     location: "", epicenter: "", magnitude: "", depth: "",
   });
-  const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState(null);
-  const [report,  setReport]  = useState(null);
-  const [trends,  setTrends]  = useState(null);
+  const [loading,        setLoading]        = useState(false);
+  const [results,        setResults]        = useState(null);
+  const [report,         setReport]         = useState(null);
+  const [trends,         setTrends]         = useState(null);
+  const [inputPanelOpen, setInputPanelOpen] = useState(false);
 
   const handleChange = (e) =>
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -25,6 +27,7 @@ export default function RiskSimulator() {
   const handleSubmit = async () => {
     if (!formData.location) return alert("Enter target city");
     setLoading(true);
+    setInputPanelOpen(false);
     try {
       const payload = {
         epicenter_city: formData.epicenter,
@@ -33,32 +36,41 @@ export default function RiskSimulator() {
         depth:          parseFloat(formData.depth),
       };
 
-      // Replaced localhost with api utility
-      const data = await api.post('/predict-damage', payload);
+      const res = await fetch(`${API_BASE}/predict-damage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("Prediction API failed");
+      const data = await res.json();
 
-      // Replaced Nominatim with CORS-friendly BigDataCloud geocoding
-      const geoRes = await fetch(
-        `https://api.bigdatacloud.net/data/geocoding-free?localityLanguage=en&q=${encodeURIComponent(formData.location + ", Pakistan")}`
+      const geoRes  = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${formData.location},Pakistan&limit=1`
       );
       const geoData = await geoRes.json();
-      const location = geoData?.results?.[0];
-      if (!location) { alert("City not found"); setLoading(false); return; }
+      if (!geoData.length) { alert("City not found"); setLoading(false); return; }
 
       setResults({
         ...data,
         city:      formData.location,
-        lat:       parseFloat(location.latitude),
-        lon:       parseFloat(location.longitude),
+        lat:       parseFloat(geoData[0].lat),
+        lon:       parseFloat(geoData[0].lon),
         magnitude: parseFloat(formData.magnitude),
       });
 
       const [trendRes, reportRes] = await Promise.allSettled([
-        api.post('/predict-damage-range', payload),
-        api.get(`/cityRisk/${formData.location}`),
+        fetch(`${API_BASE}/predict-damage-range`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }),
+        fetch(`${API_BASE}/cityRisk/${formData.location}`),
       ]);
 
-      if (trendRes.status  === "fulfilled") setTrends(trendRes.value);
-      if (reportRes.status === "fulfilled") setReport(reportRes.value);
+      if (trendRes.status  === "fulfilled" && trendRes.value.ok)
+        setTrends(await trendRes.value.json());
+      if (reportRes.status === "fulfilled" && reportRes.value.ok)
+        setReport(await reportRes.value.json());
 
     } catch (err) {
       console.error(err);
@@ -74,10 +86,13 @@ export default function RiskSimulator() {
     <div className="flex h-screen w-full overflow-hidden bg-[#F7F8FC] text-gray-800">
       <Sidebar />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
-        <div className="bg-white border-b border-gray-100 px-5 py-2 flex items-center gap-3 shrink-0">
-          <span className="text-gray-300 text-xs">|</span>
+        {/* Back button bar */}
+        <div className="bg-white border-b border-gray-100 px-4 sm:px-5 py-2 flex items-center gap-3 shrink-0">
+          {/* Spacer for mobile hamburger */}
+          <div className="w-9 sm:w-0 shrink-0 lg:hidden" />
+          <span className="text-gray-300 text-xs hidden sm:block">|</span>
           <button
             onClick={() => navigate("/dashboard")}
             className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#6B46C1] transition-colors"
@@ -86,29 +101,52 @@ export default function RiskSimulator() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                 d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
             </svg>
-            Back to Dashboard
+            <span className="hidden sm:inline">Back to Dashboard</span>
+            <span className="sm:hidden">Dashboard</span>
           </button>
         </div>
 
+        {/* Top bar */}
         <TopBar
           results={results}
           loading={loading}
           onRun={handleSubmit}
           onDownload={handleDownload}
+          onOpenInputs={() => setInputPanelOpen(true)}
         />
 
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-hidden relative">
 
-          <InputSideBar
-            formData={formData}
-            onChange={handleChange}
-            results={results}
-          />
+          {/* ── MOBILE: backdrop for input panel ── */}
+          {inputPanelOpen && (
+            <div
+              className="fixed inset-0 bg-black/30 z-40 lg:hidden"
+              onClick={() => setInputPanelOpen(false)}
+            />
+          )}
 
-          <main className="flex-1 overflow-y-auto p-6">
+          {/* ── InputSideBar: static on lg, slide-in drawer on mobile ── */}
+          <div className={`
+            lg:relative lg:translate-x-0 lg:z-auto lg:flex
+            fixed top-0 left-0 h-full z-50 transition-transform duration-300
+            ${inputPanelOpen ? "translate-x-0" : "-translate-x-full"}
+            lg:translate-x-0
+          `}>
+            <InputSideBar
+              formData={formData}
+              onChange={handleChange}
+              results={results}
+              onClose={() => setInputPanelOpen(false)}
+              showClose={inputPanelOpen}
+            />
+          </div>
 
+          {/* Main content */}
+          <main className="flex-1 overflow-y-auto p-4 sm:p-6 min-w-0">
+
+            {/* Empty state */}
             {!results && !loading && (
-              <div className="flex flex-col items-center justify-center h-full text-center">
+              <div className="flex flex-col items-center justify-center h-full text-center px-4">
                 <div className="w-16 h-16 rounded-2xl bg-[#6B46C1]/10 flex items-center justify-center mb-4">
                   <svg className="w-8 h-8 text-[#6B46C1]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -116,13 +154,22 @@ export default function RiskSimulator() {
                   </svg>
                 </div>
                 <h3 className="text-lg font-black text-gray-700">No Simulation Run Yet</h3>
-                <p className="text-sm text-gray-400 mt-1">
-                  Fill in the parameters on the left and click{" "}
+                <p className="text-sm text-gray-400 mt-1 max-w-xs">
+                  Fill in the parameters{" "}
+                  <span className="lg:inline hidden">on the left</span>
+                  <button
+                    className="lg:hidden font-bold text-[#6B46C1] underline"
+                    onClick={() => setInputPanelOpen(true)}
+                  >
+                    in the input panel
+                  </button>{" "}
+                  and click{" "}
                   <span className="font-bold text-[#6B46C1]">Run Simulation</span>
                 </p>
               </div>
             )}
 
+            {/* Loading state */}
             {loading && (
               <div className="flex flex-col items-center justify-center h-full text-center">
                 <div className="w-12 h-12 rounded-full border-4 border-gray-200 border-t-[#6B46C1] animate-spin mb-4" />
@@ -131,19 +178,20 @@ export default function RiskSimulator() {
               </div>
             )}
 
+            {/* Results */}
             {results && !loading && (
               <div className="space-y-5 max-w-5xl">
                 <div>
-                  <div className="flex items-center gap-3 mb-1">
+                  <div className="flex items-center gap-3 mb-1 flex-wrap">
                     <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full bg-red-50 border border-red-200 text-red-600">
                       ⚠ HIGH RISK PROFILE
                     </span>
                     <span className="text-xs text-gray-400">Analysis v2.4.1</span>
                   </div>
-                  <h2 className="text-4xl font-black text-gray-900 leading-none">
+                  <h2 className="text-2xl sm:text-4xl font-black text-gray-900 leading-none">
                     Intelligence Report
                   </h2>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-xs sm:text-sm text-gray-500 mt-1">
                     {results.city}, Pakistan &nbsp;•&nbsp; Mw {formData.magnitude} &nbsp;•&nbsp; Depth {formData.depth} km
                   </p>
                 </div>
