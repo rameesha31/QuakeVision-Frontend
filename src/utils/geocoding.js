@@ -1,21 +1,18 @@
-// geocoding.js — direct Nominatim reverse geocoding
-// - No CORS proxy (corsproxy.io was getting 403'd by Nominatim)
-// - In-memory cache to avoid duplicate requests for same coords
-// - Sequential queue with 1-second delay between calls (Nominatim ToS: max 1 req/s)
+// geocoding.js
+// Calls our own Vercel serverless function (/api/geocode) which proxies
+// Nominatim server-side — no CORS issues, no browser blocks.
 
 const cache = new Map();
 
-// Round coords to 1 decimal place so nearby quakes reuse cached results
 const cacheKey = (lat, lon) =>
   `${Math.round(lat * 10) / 10},${Math.round(lon * 10) / 10}`;
 
-// Simple delay helper
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
-// Queue to serialize requests and respect Nominatim's 1 req/s limit
+// Serialize requests with a small gap to avoid hammering even our own endpoint
 let queue = Promise.resolve();
 let lastRequestTime = 0;
-const MIN_INTERVAL_MS = 1100; // slightly over 1s to be safe
+const MIN_INTERVAL_MS = 300; // our serverless fn + Vercel CDN cache handles rate limiting
 
 const enqueue = (fn) => {
   queue = queue.then(async () => {
@@ -28,30 +25,16 @@ const enqueue = (fn) => {
   return queue;
 };
 
-/**
- * Reverse geocode a lat/lon to a city name.
- * Returns "Outside Pakistan" or "Unknown Region" for unrecognised locations.
- */
 export async function getCityName(lat, lon) {
   const key = cacheKey(lat, lon);
   if (cache.has(key)) return cache.get(key);
 
   return enqueue(async () => {
-    // Check cache again inside the queue (another call may have populated it)
     if (cache.has(key)) return cache.get(key);
 
     try {
-      const url =
-        `https://nominatim.openstreetmap.org/reverse` +
-        `?format=json&lat=${lat}&lon=${lon}&zoom=10&addressdetails=1`;
-
-      const res = await fetch(url, {
-        headers: {
-          // Nominatim requires a valid User-Agent identifying your app
-          "User-Agent": "QuakeVisionFYP/1.0 (contact@quakevision.app)",
-          "Accept-Language": "en",
-        },
-      });
+      // Call our Vercel serverless proxy — no CORS, no browser blocks
+      const res = await fetch(`/api/geocode?lat=${lat}&lon=${lon}`);
 
       if (!res.ok) {
         const result = "Unknown Region";
@@ -61,29 +44,27 @@ export async function getCityName(lat, lon) {
 
       const data = await res.json();
       const addr = data.address || {};
+      const country = addr.country_code?.toLowerCase();
 
-      // Prefer the most specific → least specific place name
+      if (country !== "pk") {
+        cache.set(key, "Outside Pakistan");
+        return "Outside Pakistan";
+      }
+
       const city =
         addr.city ||
         addr.town ||
         addr.village ||
-        addr.county ||
+        addr.municipality ||
         addr.state_district ||
+        addr.county ||
         addr.state ||
-        null;
-
-      const country = addr.country_code?.toLowerCase();
-
-      // Filter out non-Pakistan results
-      if (!city || country !== "pk") {
-        const result = "Outside Pakistan";
-        cache.set(key, result);
-        return result;
-      }
+        "Pakistan";
 
       cache.set(key, city);
       return city;
-    } catch {
+    } catch (err) {
+      console.error("Geocoding failed:", err);
       const result = "Unknown Region";
       cache.set(key, result);
       return result;
