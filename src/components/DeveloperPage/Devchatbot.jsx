@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 
-const WS_BASE = "ws://localhost:8000/api/v1";
+const WS_BASE = "wss://kashafimaan-quakevisionfyp-backend.hf.space/api/v1";
+
 
 function now() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
