@@ -7,7 +7,6 @@ import Header from "../components/Dashboard/Header";
 import EarthquakeMap from "../components/Dashboard/EarthquakeMap";
 import EventsTable from "../components/Dashboard/EventsTable";
 import { getCityName } from "../utils/geocoding";
-import { api } from '../utils/api';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -204,7 +203,6 @@ function EventsTableFull({ rows, onSelect }) {
   };
 
   return (
-    // Height matches the map card: header(~56) + legend(~34) + map(430) = 520px total
     <div className="bg-white border border-gray-200 rounded-2xl shadow-sm flex flex-col" style={{ height: "520px" }}>
 
       {/* Header */}
@@ -250,10 +248,9 @@ function EventsTableFull({ rows, onSelect }) {
                   </span>
                 </div>
 
-                {/* Info — location NOT truncated */}
+                {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2 mb-0.5">
-                    {/* Break long place names instead of truncating */}
                     <p className="text-xs font-bold text-gray-800 break-words leading-snug">
                       {r.location}
                     </p>
@@ -273,4 +270,3 @@ function EventsTableFull({ rows, onSelect }) {
     </div>
   );
 }
-
