@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 
-const WS_BASE = "ws://localhost:8000/api/v1";
+const WS_BASE = "wss://kashafimaan-quakevisionfyp-backend.hf.space/api/v1";
 
 function now() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -88,7 +88,6 @@ export default function HomeChatbot({ sessionId, reportData, onReportUpdate }) {
         "message"
       );
     } else {
-      // Only show options — NO auto summary
       addBot(
         `✅ Report ready! Validation score: ${reportData?.validation_score || "—"}/100. What would you like to do?`,
         "options"
@@ -240,7 +239,8 @@ export default function HomeChatbot({ sessionId, reportData, onReportUpdate }) {
 
     return (
       <div key={i} className="flex flex-col items-start">
-      <div className="bg-white border border-gray-200 text-gray-700 text-xs rounded-xl rounded-tl-sm px-3 py-2.5 max-w-[95%] leading-relaxed shadow-sm whitespace-pre-line break-words">          {text}
+        <div className="bg-white border border-gray-200 text-gray-700 text-xs rounded-xl rounded-tl-sm px-3 py-2.5 max-w-[95%] leading-relaxed shadow-sm whitespace-pre-line break-words">
+          {text}
           {extra}
         </div>
         <span className="text-[10px] text-gray-400 mt-1 px-1">{time}</span>
