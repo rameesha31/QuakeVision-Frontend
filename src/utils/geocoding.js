@@ -1,7 +1,4 @@
 // geocoding.js
-// Calls our own Vercel serverless function (/api/geocode) which proxies
-// Nominatim server-side — no CORS issues, no browser blocks.
-
 const cache = new Map();
 
 const cacheKey = (lat, lon) =>
@@ -9,10 +6,9 @@ const cacheKey = (lat, lon) =>
 
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
-// Serialize requests with a small gap to avoid hammering even our own endpoint
 let queue = Promise.resolve();
 let lastRequestTime = 0;
-const MIN_INTERVAL_MS = 300; // our serverless fn + Vercel CDN cache handles rate limiting
+const MIN_INTERVAL_MS = 300;
 
 const enqueue = (fn) => {
   queue = queue.then(async () => {
@@ -33,41 +29,37 @@ export async function getCityName(lat, lon) {
     if (cache.has(key)) return cache.get(key);
 
     try {
-      // Call our Vercel serverless proxy — no CORS, no browser blocks
-      const res = await fetch(`/api/geocode?lat=${lat}&lon=${lon}`);
+      // BigDataCloud: free, no API key, CORS-friendly — works from browser
+      const res = await fetch(
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
+      );
 
       if (!res.ok) {
-        const result = "Unknown Region";
-        cache.set(key, result);
-        return result;
+        cache.set(key, "Unknown Region");
+        return "Unknown Region";
       }
 
       const data = await res.json();
-      const addr = data.address || {};
-      const country = addr.country_code?.toLowerCase();
 
-      if (country !== "pk") {
+      if (data.countryCode !== "PK") {
         cache.set(key, "Outside Pakistan");
         return "Outside Pakistan";
       }
 
       const city =
-        addr.city ||
-        addr.town ||
-        addr.village ||
-        addr.municipality ||
-        addr.state_district ||
-        addr.county ||
-        addr.state ||
+        data.city ||
+        data.locality ||
+        data.localityInfo?.administrative?.find(a => a.adminLevel === 6)?.name ||
+        data.localityInfo?.administrative?.find(a => a.adminLevel === 4)?.name ||
+        data.principalSubdivision ||
         "Pakistan";
 
       cache.set(key, city);
       return city;
     } catch (err) {
       console.error("Geocoding failed:", err);
-      const result = "Unknown Region";
-      cache.set(key, result);
-      return result;
+      cache.set(key, "Unknown Region");
+      return "Unknown Region";
     }
   });
 }
