@@ -88,10 +88,7 @@ export default function RiskSimulator() {
     <div className="flex h-screen w-full overflow-hidden bg-[#F7F8FC] text-gray-800">
 
       {/* Sidebar: controlled on mobile, self-managed on desktop */}
-      <Sidebar
-        open={!isDesktop ? sidebarOpen : undefined}
-        onClose={!isDesktop ? () => setSidebarOpen(false) : undefined}
-      />
+      <Sidebar/>
 
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
@@ -99,7 +96,7 @@ export default function RiskSimulator() {
         <div className="bg-white border-b border-gray-100 px-4 py-2 flex items-center gap-2 shrink-0">
           {/* Hamburger — mobile only, inline in top-bar */}
           {!isDesktop && (
-            <SidebarToggleButton onClick={() => setSidebarOpen(true)} />
+            <SidebarToggleButton onClick={() => window.__sidebarOpen?.()} />
           )}
           <span className="text-gray-300 text-xs hidden sm:block">|</span>
           <button
