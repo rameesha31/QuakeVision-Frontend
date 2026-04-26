@@ -60,17 +60,17 @@ export default function GovInput({ onGenerate, loading }) {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-8">
-      <div className="max-w-2xl">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div className="w-full max-w-2xl mx-auto lg:mx-0">
 
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-3">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3">
             <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 uppercase tracking-wider">
               🏛 Government Module
             </span>
             <span className="text-xs text-gray-400 uppercase tracking-widest">Urban Policy Engine</span>
           </div>
-          <h1 className="text-4xl font-black text-gray-900 leading-none">
+          <h1 className="text-3xl sm:text-4xl font-black text-gray-900 leading-none">
             Government <span className="text-[#6B46C1] italic">Strategy Plan</span>
           </h1>
           <p className="text-sm text-gray-400 mt-2">
@@ -78,10 +78,10 @@ export default function GovInput({ onGenerate, loading }) {
           </p>
         </div>
 
-        <div className="space-y-5">
+        <div className="space-y-4 sm:space-y-5">
 
           {/* City + Sector */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Field label="City">
               <input
                 type="text"
@@ -103,12 +103,12 @@ export default function GovInput({ onGenerate, loading }) {
 
           {/* Magnitude */}
           <Field label="Simulated Magnitude">
-            <div className="flex items-center gap-5">
+            <div className="flex items-center gap-3 sm:gap-5">
               <div className="shrink-0">
-                <div className="text-3xl font-black text-[#6B46C1]">{formData.magnitude.toFixed(1)}</div>
+                <div className="text-2xl sm:text-3xl font-black text-[#6B46C1]">{formData.magnitude.toFixed(1)}</div>
                 <div className="text-[10px] text-gray-400 mt-0.5">Richter (Mw)</div>
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="relative h-2 rounded-full mb-2"
                   style={{ background: "linear-gradient(90deg,#86efac 0%,#fde68a 40%,#fdba74 70%,#fca5a5 100%)" }}>
                   <input type="range" min={4} max={9.5} step={0.1}
@@ -122,15 +122,15 @@ export default function GovInput({ onGenerate, loading }) {
                   <span>4.0</span><span>5.0</span><span>6.0</span><span>7.0</span><span>8.0</span><span>9.5</span>
                 </div>
               </div>
-              <div className="shrink-0 text-right min-w-[60px]">
+              <div className="shrink-0 text-right min-w-[55px]">
                 <div className="text-[10px] text-gray-400">Zone</div>
-                <div className={`text-sm font-bold mt-0.5 ${ZONE_COLORS[zone]}`}>{zone}</div>
+                <div className={`text-xs sm:text-sm font-bold mt-0.5 ${ZONE_COLORS[zone]}`}>{zone}</div>
               </div>
             </div>
           </Field>
 
           {/* Retrofit Capacity + Priority */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Field label="Retrofit Capacity (Buildings)">
               <input type="number" min={1} max={10000}
                 value={formData.retrofit_capacity}
@@ -149,7 +149,7 @@ export default function GovInput({ onGenerate, loading }) {
           </div>
 
           {/* Retrofit Style + Budget */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Field label="Retrofit Style">
               <select value={formData.retrofit_style}
                 onChange={e => set("retrofit_style", e.target.value)}
@@ -171,7 +171,7 @@ export default function GovInput({ onGenerate, loading }) {
           </div>
 
           {/* Sqft + Floors */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Field label="Avg Building Size (sq ft)">
               <input type="number" min={100}
                 value={formData.project_size_sqft}
@@ -187,7 +187,7 @@ export default function GovInput({ onGenerate, loading }) {
           </div>
 
           {/* Timeline + Web */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Field label="Implementation Timeline">
               <div className="flex gap-2">
                 <input type="number" min={1}
@@ -214,7 +214,7 @@ export default function GovInput({ onGenerate, loading }) {
 
           {/* Submit */}
           <button onClick={handleSubmit} disabled={loading}
-            className={`w-full py-4 rounded-xl text-sm font-bold tracking-wider flex items-center justify-center gap-2 transition-all shadow-md ${
+            className={`w-full py-3.5 sm:py-4 rounded-xl text-sm font-bold tracking-wider flex items-center justify-center gap-2 transition-all shadow-md ${
               loading ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-[#6B46C1] hover:bg-[#5a38a8] text-white hover:shadow-lg"
             }`}>
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

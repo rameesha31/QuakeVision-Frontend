@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "../components/Dashboard/Sidebar";
+import Sidebar, { useIsDesktop, SidebarToggleButton } from "../components/Dashboard/Sidebar";
 import GovInput from "../components/GovtPage/GovInput";
 import GovDashboard from "../components/GovtPage/GovtDashboard";
 import GovChatbot from "../components/GovtPage/GovChatbot";
@@ -9,12 +9,15 @@ import LoadingOverlay from "../components/HomeSafetyPage/LoadingOverlay";
 const API_BASE = "https://kashafimaan-quakevisionfyp-backend.hf.space/api/v1";
 
 export default function GovernmentPage() {
-  const navigate = useNavigate();
-  const [page, setPage]               = useState("input");
-  const [loading, setLoading]         = useState(false);
+  const navigate  = useNavigate();
+  const isDesktop = useIsDesktop();
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [page,        setPage]        = useState("input");
+  const [loading,     setLoading]     = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
-  const [reportData, setReportData]   = useState(null);
-  const [sessionId, setSessionId]     = useState(null);
+  const [reportData,  setReportData]  = useState(null);
+  const [sessionId,   setSessionId]   = useState(null);
 
   const PIPELINE_MSGS = [
     "Processing sector inputs...",
@@ -79,13 +82,23 @@ export default function GovernmentPage() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#F7F8FC] text-gray-800">
-      <Sidebar />
-      <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 flex flex-col overflow-hidden relative">
 
-          {/* ── Back to Dashboard bar ── */}
-          <div className="bg-white border-b border-gray-100 px-5 py-2 flex items-center gap-3 shrink-0">
-            <span className="text-gray-300 text-xs">|</span>
+      {/* Sidebar: controlled on mobile, self-managed on desktop */}
+      <Sidebar
+        open={!isDesktop ? sidebarOpen : undefined}
+        onClose={!isDesktop ? () => setSidebarOpen(false) : undefined}
+      />
+
+      <div className="flex-1 flex overflow-hidden min-w-0">
+        <div className="flex-1 flex flex-col overflow-hidden relative min-w-0">
+
+          {/* ── Top bar ── */}
+          <div className="bg-white border-b border-gray-100 px-4 py-2 flex items-center gap-2 shrink-0">
+            {/* Hamburger button — mobile only, inline in top-bar */}
+            {!isDesktop && (
+              <SidebarToggleButton onClick={() => setSidebarOpen(true)} />
+            )}
+            <span className="text-gray-300 text-xs hidden sm:block">|</span>
             <button
               onClick={() => navigate("/dashboard")}
               className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#6B46C1] transition-colors"
@@ -94,7 +107,8 @@ export default function GovernmentPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
-              Back to Dashboard
+              <span className="hidden sm:inline">Back to Dashboard</span>
+              <span className="sm:hidden">Dashboard</span>
             </button>
           </div>
 
@@ -108,7 +122,25 @@ export default function GovernmentPage() {
             <GovDashboard reportData={reportData} sessionId={sessionId} onBack={() => setPage("input")} />
           )}
         </div>
-        <GovChatbot sessionId={sessionId} reportData={reportData} onReportUpdate={(newData) => setReportData(newData)} />
+
+        {/* Desktop chatbot — static right panel */}
+        <div className="hidden lg:block">
+          <GovChatbot
+            sessionId={sessionId}
+            reportData={reportData}
+            onReportUpdate={(newData) => setReportData(newData)}
+          />
+        </div>
+      </div>
+
+      {/* Mobile chatbot — outside flex row so it can overlay content */}
+      <div className="lg:hidden">
+        <GovChatbot
+          sessionId={sessionId}
+          reportData={reportData}
+          onReportUpdate={(newData) => setReportData(newData)}
+          mobileMode={true}
+        />
       </div>
     </div>
   );

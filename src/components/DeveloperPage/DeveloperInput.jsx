@@ -9,8 +9,6 @@ const SECTORS = [
   "SECTOR I-08","SECTOR I-09","SECTOR I-10","SECTOR I-11","SECTOR I-15","SECTOR I-16",
 ];
 
-// building_type valid values from backend Literal check:
-// 'residential', 'commercial', 'mixed-use', 'industrial'
 const BUILDING_TYPES = [
   { key: "residential", abbr: "RES", label: "Residential" },
   { key: "commercial",  abbr: "COM", label: "Commercial"  },
@@ -49,8 +47,8 @@ export default function DeveloperInput({ onGenerate, loading }) {
     city_name:         "Islamabad",
     site_sector:       "",
     project_name:      "",
-    project_type:      "Commercial Plaza",   // free-text description sent to LLM
-    building_type:     "commercial",         // Literal — must be one of the 4 valid values
+    project_type:      "Commercial Plaza",
+    building_type:     "commercial",
     floors:            8,
     project_size_sqft: 15000,
     budget_level:      "moderate",
@@ -70,17 +68,17 @@ export default function DeveloperInput({ onGenerate, loading }) {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-8">
-      <div className="max-w-2xl">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div className="w-full max-w-2xl mx-auto lg:mx-0">
 
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-3">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3">
             <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-600 uppercase tracking-wider">
               🏗 Developer Module
             </span>
             <span className="text-xs text-gray-400 uppercase tracking-widest">Feasibility Engine</span>
           </div>
-          <h1 className="text-4xl font-black text-gray-900 leading-none">
+          <h1 className="text-3xl sm:text-4xl font-black text-gray-900 leading-none">
             Developer <span className="text-[#6B46C1] italic">Plan</span>
           </h1>
           <p className="text-sm text-gray-400 mt-2">
@@ -88,10 +86,10 @@ export default function DeveloperInput({ onGenerate, loading }) {
           </p>
         </div>
 
-        <div className="space-y-5">
+        <div className="space-y-4 sm:space-y-5">
 
           {/* City + Sector */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Field label="City">
               <select value={formData.city_name}
                 onChange={e => set("city_name", e.target.value)}
@@ -110,7 +108,7 @@ export default function DeveloperInput({ onGenerate, loading }) {
           </div>
 
           {/* Project Name + Project Type */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Field label="Project Name">
               <input
                 type="text"
@@ -133,12 +131,12 @@ export default function DeveloperInput({ onGenerate, loading }) {
 
           {/* Magnitude Slider */}
           <Field label="Simulated Magnitude">
-            <div className="flex items-center gap-5">
+            <div className="flex items-center gap-3 sm:gap-5">
               <div className="shrink-0">
-                <div className="text-3xl font-black text-[#6B46C1]">{formData.magnitude.toFixed(1)}</div>
+                <div className="text-2xl sm:text-3xl font-black text-[#6B46C1]">{formData.magnitude.toFixed(1)}</div>
                 <div className="text-[10px] text-gray-400 mt-0.5">Richter (Mw)</div>
               </div>
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <div className="relative h-2 rounded-full mb-2"
                   style={{ background: "linear-gradient(90deg,#86efac 0%,#fde68a 40%,#fdba74 70%,#fca5a5 100%)" }}>
                   <input type="range" min={4} max={9.5} step={0.1}
@@ -152,20 +150,20 @@ export default function DeveloperInput({ onGenerate, loading }) {
                   <span>4.0</span><span>5.0</span><span>6.0</span><span>7.0</span><span>8.0</span><span>9.5</span>
                 </div>
               </div>
-              <div className="shrink-0 text-right min-w-[60px]">
+              <div className="shrink-0 text-right min-w-[55px]">
                 <div className="text-[10px] text-gray-400">Zone</div>
-                <div className={`text-sm font-bold mt-0.5 ${ZONE_COLORS[zone]}`}>{zone}</div>
+                <div className={`text-xs sm:text-sm font-bold mt-0.5 ${ZONE_COLORS[zone]}`}>{zone}</div>
               </div>
             </div>
           </Field>
 
-          {/* Building Type — Literal values only */}
+          {/* Building Type */}
           <Field label="Building Type">
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {BUILDING_TYPES.map(bt => (
                 <button key={bt.key}
                   onClick={() => set("building_type", bt.key)}
-                  className={`py-2.5 rounded-xl border text-xs font-medium transition-all ${
+                  className={`py-2 sm:py-2.5 rounded-xl border text-xs font-medium transition-all ${
                     formData.building_type === bt.key
                       ? "border-[#6B46C1] bg-[#6B46C1]/10 text-[#6B46C1]"
                       : "border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300 hover:text-gray-700"
@@ -178,7 +176,7 @@ export default function DeveloperInput({ onGenerate, loading }) {
           </Field>
 
           {/* Floors + Floor Plate */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Field label="Floors">
               <input type="number" min={1} max={100}
                 value={formData.floors}
@@ -194,7 +192,7 @@ export default function DeveloperInput({ onGenerate, loading }) {
           </div>
 
           {/* Budget + Timeline */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Field label="Budget Level">
               <select value={formData.budget_level}
                 onChange={e => set("budget_level", e.target.value)}
@@ -221,7 +219,7 @@ export default function DeveloperInput({ onGenerate, loading }) {
           </div>
 
           {/* Web Search */}
-          <Field label="Web Search">
+          <Field label="Knowledge Source">
             <select value={formData.allow_web}
               onChange={e => set("allow_web", e.target.value === "true")}
               className={inputCls}>
@@ -232,7 +230,7 @@ export default function DeveloperInput({ onGenerate, loading }) {
 
           {/* Submit */}
           <button onClick={handleSubmit} disabled={loading}
-            className={`w-full py-4 rounded-xl text-sm font-bold tracking-wider flex items-center justify-center gap-2 transition-all shadow-md ${
+            className={`w-full py-3.5 sm:py-4 rounded-xl text-sm font-bold tracking-wider flex items-center justify-center gap-2 transition-all shadow-md ${
               loading ? "bg-gray-100 text-gray-400 cursor-not-allowed" : "bg-[#6B46C1] hover:bg-[#5a38a8] text-white hover:shadow-lg"
             }`}>
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

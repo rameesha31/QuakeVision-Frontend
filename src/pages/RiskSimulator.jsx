@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "../components/Dashboard/Sidebar";
+import Sidebar, { useIsDesktop, SidebarToggleButton } from "../components/Dashboard/Sidebar";
 import TopBar from "../components/Risk/TopBar";
 import InputSideBar from "../components/Risk/InputSideBar";
 import ReportCards from "../components/Risk/ReportCards";
@@ -10,9 +10,11 @@ import { generatePDF } from "../components/Risk/DownloadPdf";
 const API_BASE = "https://kashafimaan-quakevisionfyp-backend.hf.space";
 
 export default function RiskSimulator() {
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
+  const isDesktop = useIsDesktop();
 
-  const [formData, setFormData] = useState({
+  const [sidebarOpen,    setSidebarOpen]    = useState(false);
+  const [formData,       setFormData]       = useState({
     location: "", epicenter: "", magnitude: "", depth: "",
   });
   const [loading,        setLoading]        = useState(false);
@@ -84,14 +86,21 @@ export default function RiskSimulator() {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#F7F8FC] text-gray-800">
-      <Sidebar />
+
+      {/* Sidebar: controlled on mobile, self-managed on desktop */}
+      <Sidebar
+        open={!isDesktop ? sidebarOpen : undefined}
+        onClose={!isDesktop ? () => setSidebarOpen(false) : undefined}
+      />
 
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
-        {/* Back button bar */}
-        <div className="bg-white border-b border-gray-100 px-4 sm:px-5 py-2 flex items-center gap-3 shrink-0">
-          {/* Spacer for mobile hamburger */}
-          <div className="w-9 sm:w-0 shrink-0 lg:hidden" />
+        {/* ── Top bar: hamburger (mobile only) + back button ── */}
+        <div className="bg-white border-b border-gray-100 px-4 py-2 flex items-center gap-2 shrink-0">
+          {/* Hamburger — mobile only, inline in top-bar */}
+          {!isDesktop && (
+            <SidebarToggleButton onClick={() => setSidebarOpen(true)} />
+          )}
           <span className="text-gray-300 text-xs hidden sm:block">|</span>
           <button
             onClick={() => navigate("/dashboard")}
@@ -106,7 +115,7 @@ export default function RiskSimulator() {
           </button>
         </div>
 
-        {/* Top bar */}
+        {/* Run / download controls */}
         <TopBar
           results={results}
           loading={loading}
@@ -117,7 +126,7 @@ export default function RiskSimulator() {
 
         <div className="flex flex-1 overflow-hidden relative">
 
-          {/* ── MOBILE: backdrop for input panel ── */}
+          {/* Mobile backdrop for input panel */}
           {inputPanelOpen && (
             <div
               className="fixed inset-0 bg-black/30 z-40 lg:hidden"
@@ -125,7 +134,7 @@ export default function RiskSimulator() {
             />
           )}
 
-          {/* ── InputSideBar: static on lg, slide-in drawer on mobile ── */}
+          {/* InputSideBar: static on lg, slide-in drawer on mobile */}
           <div className={`
             lg:relative lg:translate-x-0 lg:z-auto lg:flex
             fixed top-0 left-0 h-full z-50 transition-transform duration-300
@@ -202,6 +211,21 @@ export default function RiskSimulator() {
             )}
 
           </main>
+
+          {/* Floating Inputs button — mobile only, bottom-right corner */}
+          {!inputPanelOpen && (
+            <button
+              onClick={() => setInputPanelOpen(true)}
+              className="lg:hidden fixed bottom-5 right-5 z-30 flex items-center gap-2 px-4 py-3 rounded-2xl bg-[#6B46C1] text-white text-sm font-bold shadow-lg hover:bg-[#5a38a8] active:scale-95 transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 4a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
+              Inputs
+            </button>
+          )}
+
         </div>
       </div>
     </div>

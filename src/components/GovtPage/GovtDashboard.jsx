@@ -2,7 +2,7 @@ import {
   PieChart, Pie, Cell,
   BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
 } from "recharts";
-import { Govreport as downloadGovReport } from "./Govreport";
+import { Govreport } from "./Govreport";
 
 function formatPKR(n) {
   n = Math.round(n);
@@ -19,13 +19,12 @@ function stripMd(text) {
 }
 function safeNum(v, def = 0) { const n = Number(v); return isNaN(n) ? def : n; }
 
-// Pakistan average household size — used when population data is missing
 const AVG_PERSONS_PER_BUILDING = 6;
 
 function AllocBar({ label, value, max, color }) {
   return (
-    <div className="flex items-center gap-3 mb-3">
-      <span className="text-xs text-gray-500 w-28 shrink-0">{label}</span>
+    <div className="flex items-center gap-2 sm:gap-3 mb-3">
+      <span className="text-xs text-gray-500 w-24 sm:w-28 shrink-0">{label}</span>
       <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
         <div className="h-2.5 rounded-full transition-all"
           style={{ width: `${Math.min((safeNum(value,0) / Math.max(safeNum(max,1),1)) * 100, 100)}%`, background: color }} />
@@ -41,22 +40,6 @@ const BUDGET_COLORS= ["#EF4444","#F59E0B","#10B981","#3B82F6","#8B5CF6"];
 
 export default function GovDashboard({ reportData, sessionId, onBack }) {
 
-  // ── DEBUG LOGGING ──────────────────────────────────────────────────────────
-  console.log("🏛️ GovDashboard received reportData:", reportData);
-  console.log("🏛️ session_id:", sessionId);
-  console.log("🏛️ visualization_data:", reportData?.visualization_data);
-  console.log("🏛️ viz keys:", reportData?.visualization_data ? Object.keys(reportData.visualization_data) : "NONE");
-  console.log("🏛️ project_info:", reportData?.visualization_data?.project_info);
-  console.log("🏛️ building_stock:", reportData?.visualization_data?.building_stock);
-  console.log("🏛️ allocation:", reportData?.visualization_data?.allocation);
-  console.log("🏛️ budget_pkr:", reportData?.visualization_data?.budget_pkr);
-  console.log("🏛️ impact:", reportData?.visualization_data?.impact);
-  console.log("🏛️ timeline:", reportData?.visualization_data?.timeline);
-  console.log("🏛️ risk_assessment_summary:", reportData?.risk_assessment_summary);
-  console.log("🏛️ action_recommendations:", reportData?.action_recommendations);
-  console.log("🏛️ validation_score:", reportData?.validation_score);
-  console.log("🏛️ is_fallback:", reportData?.is_fallback);
-
   const viz    = reportData?.visualization_data || {};
   const proj   = viz.project_info   || {};
   const stock  = viz.building_stock || {};
@@ -65,21 +48,22 @@ export default function GovDashboard({ reportData, sessionId, onBack }) {
   const impact = viz.impact         || {};
   const tl     = viz.timeline       || {};
 
-  // ── POPULATION — fallback to avg if 0 or missing ──────────────────────────
-  const rawPopulation        = safeNum(proj.population, 0);
-  const hasPopulationData    = rawPopulation > 0;
-  const estimatedPopulation  = hasPopulationData
+  const rawPopulation       = safeNum(proj.population, 0);
+  const hasPopulationData   = rawPopulation > 0;
+  const estimatedPopulation = hasPopulationData
     ? rawPopulation
     : safeNum(proj.total_buildings, 0) * AVG_PERSONS_PER_BUILDING;
-  const populationSubLabel   = hasPopulationData
+  const populationSubLabel  = hasPopulationData
     ? "residents in sector"
     : `est. residents (avg ${AVG_PERSONS_PER_BUILDING}/building)`;
 
   const riskLvl  = viz.risk_assessment?.risk_level || "Moderate";
   const riskClass = {
-    Low:"bg-green-50 border-green-200 text-green-600", Moderate:"bg-amber-50 border-amber-200 text-amber-600",
-    High:"bg-red-50 border-red-200 text-red-600", Severe:"bg-red-50 border-red-200 text-red-600",
-    Extreme:"bg-red-50 border-red-200 text-red-600",
+    Low:      "bg-green-50 border-green-200 text-green-600",
+    Moderate: "bg-amber-50 border-amber-200 text-amber-600",
+    High:     "bg-red-50 border-red-200 text-red-600",
+    Severe:   "bg-red-50 border-red-200 text-red-600",
+    Extreme:  "bg-red-50 border-red-200 text-red-600",
   }[riskLvl] || "bg-amber-50 border-amber-200 text-amber-600";
 
   const stockData = [
@@ -110,12 +94,12 @@ export default function GovDashboard({ reportData, sessionId, onBack }) {
 
   return (
     <div className="flex flex-1 overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-6 space-y-5">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-5 lg:p-6 space-y-4 sm:space-y-5">
 
         {/* HEADER */}
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
               <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${riskClass}`}>
                 ◉ {riskLvl.toUpperCase()} RISK
               </span>
@@ -131,17 +115,19 @@ export default function GovDashboard({ reportData, sessionId, onBack }) {
                 </span>
               )}
             </div>
-            <h2 className="text-4xl font-black text-gray-900 leading-none">Urban Action Plan</h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <h2 className="text-3xl sm:text-4xl font-black text-gray-900 leading-none">Urban Action Plan</h2>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1 leading-relaxed">
               {proj.sector_name||"—"}, {proj.city||"Islamabad"} &nbsp;•&nbsp; Mw {proj.magnitude||"—"}
               &nbsp;•&nbsp; {safeNum(proj.retrofit_capacity,0).toLocaleString()} of {safeNum(proj.total_buildings,0).toLocaleString()} buildings
-              &nbsp;•&nbsp; {estimatedPopulation.toLocaleString()} {hasPopulationData ? "population" : "est. population"}
+              &nbsp;•&nbsp; {estimatedPopulation.toLocaleString()} {hasPopulationData ? "population" : "est. pop."}
             </p>
           </div>
-          <div className="flex gap-2 flex-wrap">
-            <button onClick={onBack} className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-500 text-xs font-semibold hover:border-gray-300 transition-all">✏ Modify</button>
-            <button onClick={() => downloadGovReport(reportData)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#6B46C1] text-white text-xs font-semibold hover:bg-[#5a38a8] transition-all shadow-sm">
+          <div className="flex gap-2 flex-wrap shrink-0">
+            <button onClick={onBack} className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-500 text-xs font-semibold hover:border-gray-300 transition-all">✏ Modify</button>
+            <button
+              onClick={() => Govreport(reportData)}
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg bg-[#6B46C1] text-white text-xs font-semibold hover:bg-[#5a38a8] transition-all shadow-sm"
+            >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
@@ -150,62 +136,56 @@ export default function GovDashboard({ reportData, sessionId, onBack }) {
           </div>
         </div>
 
-        {/* IMPACT HERO */}
-        <div className="grid grid-cols-4 gap-3">
+        {/* IMPACT HERO — 2 cols mobile, 4 desktop */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
           {[
             { val: impact.total_lives_saved??"-",   label:"Lives Saved",          sub:`At Mw ${proj.magnitude||"—"}`,                                    color:"text-emerald-500" },
-            { val: safeNum(proj.retrofit_capacity,0).toLocaleString(), label:"Buildings Retrofitted", sub:`of ${safeNum(proj.total_buildings,0).toLocaleString()} total`, color:"text-blue-500" },
-            { val:`PKR ${formatPKR(safeNum(budget.grand_total,0))}`,   label:"Total Budget",          sub:capFirst(proj.budget_level||"moderate"),                        color:"text-amber-500" },
-            { val:`${impact.benefit_cost_ratio??"-"}x`,                label:"Benefit-Cost Ratio",    sub:`PKR ${impact.economic_benefit_millions??"-"}M economic benefit`,color:"text-[#6B46C1]" },
+            { val: safeNum(proj.retrofit_capacity,0).toLocaleString(), label:"Bldgs Retrofitted", sub:`of ${safeNum(proj.total_buildings,0).toLocaleString()} total`, color:"text-blue-500" },
+            { val:`PKR ${formatPKR(safeNum(budget.grand_total,0))}`,   label:"Total Budget",      sub:capFirst(proj.budget_level||"moderate"),                        color:"text-amber-500" },
+            { val:`${impact.benefit_cost_ratio??"-"}x`,                label:"BCR",               sub:`PKR ${impact.economic_benefit_millions??"-"}M benefit`,        color:"text-[#6B46C1]" },
           ].map((s,i)=>(
-            <div key={i} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 text-center">
-              <p className={`text-3xl font-black ${s.color}`}>{s.val}</p>
+            <div key={i} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-3 sm:p-4 text-center">
+              <p className={`text-2xl sm:text-3xl font-black ${s.color}`}>{s.val}</p>
               <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mt-1">{s.label}</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">{s.sub}</p>
+              <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">{s.sub}</p>
             </div>
           ))}
         </div>
 
-        {/* KPI ROW */}
-        <div className="grid grid-cols-4 gap-3">
+        {/* KPI ROW — 2 cols mobile, 4 desktop */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
           {[
-            { label:"Risk Reduction",       val:`${impact.risk_reduction_points??"-"} pts`, sub:`${impact.current_risk_percent}% → ${impact.target_risk_percent}% sector risk`, color:"text-emerald-500" },
-            { label:"Kacha Buildings",      val:alloc.kacha??"-",                           sub:"Priority allocation (70%)",                                                    color:"text-amber-500" },
-            { label:"Total Sqft Covered",   val:proj.total_sqft?`${(safeNum(proj.total_sqft,0)/1000).toFixed(0)}K`:"—", sub:"sq ft across sector",                            color:"text-blue-500" },
-            {
-              label: "Population Protected",
-              val: estimatedPopulation.toLocaleString(),
-              sub: populationSubLabel,
-              color: "text-emerald-500"
-            },
+            { label:"Risk Reduction",     val:`${impact.risk_reduction_points??"-"} pts`, sub:`${impact.current_risk_percent}% → ${impact.target_risk_percent}%`, color:"text-emerald-500" },
+            { label:"Kacha Buildings",    val:alloc.kacha??"-",                           sub:"Priority allocation (70%)",                                       color:"text-amber-500" },
+            { label:"Total Sqft",         val:proj.total_sqft?`${(safeNum(proj.total_sqft,0)/1000).toFixed(0)}K`:"—", sub:"sq ft across sector",                color:"text-blue-500" },
+            { label:"Pop. Protected",     val: estimatedPopulation.toLocaleString(),      sub: populationSubLabel,                                               color:"text-emerald-500" },
           ].map((k,i)=>(
-            <div key={i} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+            <div key={i} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-3 sm:p-4">
               <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2">{k.label}</p>
-              <p className={`text-2xl font-black ${k.color}`}>{k.val}</p>
-              <p className="text-[10px] text-gray-400 mt-1">{k.sub}</p>
+              <p className={`text-xl sm:text-2xl font-black ${k.color}`}>{k.val}</p>
+              <p className="text-[10px] text-gray-400 mt-1 leading-tight">{k.sub}</p>
             </div>
-          )
-          )}
+          ))}
         </div>
 
-        {/* Building Stock + Alloc */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+        {/* Building Stock + Alloc — stack on mobile */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5">
             <p className="text-sm font-bold text-gray-800 mb-0.5">Building Stock</p>
             <p className="text-[10px] text-gray-400 mb-3">Construction type distribution</p>
             {stockData.length > 0 ? (
               <div className="flex items-center gap-4">
-                <PieChart width={130} height={130}>
-                  <Pie data={stockData} cx={60} cy={60} innerRadius={36} outerRadius={56} dataKey="value" strokeWidth={0}>
+                <PieChart width={120} height={120}>
+                  <Pie data={stockData} cx={55} cy={55} innerRadius={32} outerRadius={52} dataKey="value" strokeWidth={0}>
                     {stockData.map((_,i)=><Cell key={i} fill={STOCK_COLORS[i]}/>)}
                   </Pie>
                 </PieChart>
-                <div className="flex flex-col gap-2 flex-1">
+                <div className="flex flex-col gap-2 flex-1 min-w-0">
                   {stockData.map((d,i)=>(
                     <div key={d.name} className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{background:STOCK_COLORS[i]}}/>
-                      <span className="text-[11px] text-gray-500 flex-1">{d.name}</span>
-                      <span className="text-[11px] font-bold text-gray-700">{d.value}%</span>
+                      <span className="text-[11px] text-gray-500 flex-1 truncate">{d.name}</span>
+                      <span className="text-[11px] font-bold text-gray-700 shrink-0">{d.value}%</span>
                     </div>
                   ))}
                 </div>
@@ -213,7 +193,7 @@ export default function GovDashboard({ reportData, sessionId, onBack }) {
             ) : <p className="text-xs text-gray-400 italic">No building stock data in response</p>}
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5">
             <p className="text-sm font-bold text-gray-800 mb-0.5">Retrofit Allocation</p>
             <p className="text-[10px] text-gray-400 mb-4">Buildings by construction type priority</p>
             <AllocBar label="Kacha"      value={alloc.kacha||0}      max={maxAlloc} color="#EF4444"/>
@@ -233,9 +213,9 @@ export default function GovDashboard({ reportData, sessionId, onBack }) {
           </div>
         </div>
 
-        {/* Budget + Risk Reduction + BCR */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+        {/* Budget + Risk Reduction + BCR — stack on mobile */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5">
             <p className="text-sm font-bold text-gray-800 mb-0.5">Budget Allocation</p>
             <p className="text-[10px] text-gray-400 mb-3">PKR spend by category</p>
             {budgetData.length > 0 ? (
@@ -259,7 +239,7 @@ export default function GovDashboard({ reportData, sessionId, onBack }) {
             ) : <p className="text-xs text-gray-400 italic">No budget data in response</p>}
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5">
             <p className="text-sm font-bold text-gray-800 mb-0.5">Risk Reduction</p>
             <p className="text-[10px] text-gray-400 mb-4">Sector risk before vs after</p>
             <div className="space-y-3 mb-4">
@@ -299,10 +279,10 @@ export default function GovDashboard({ reportData, sessionId, onBack }) {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 flex flex-col items-center justify-center">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5 flex flex-col items-center justify-center">
             <p className="text-sm font-bold text-gray-800 mb-0.5 self-start w-full">Benefit-Cost Ratio</p>
             <p className="text-[10px] text-gray-400 mb-4 self-start">Economic return on retrofit investment</p>
-            <p className="text-6xl font-black text-emerald-500 leading-none">{impact.benefit_cost_ratio??"-"}x</p>
+            <p className="text-5xl sm:text-6xl font-black text-emerald-500 leading-none">{impact.benefit_cost_ratio??"-"}x</p>
             <p className="text-[10px] text-gray-400 mt-2 uppercase tracking-wider">PKR benefit per PKR spent</p>
             <div className="mt-4 w-full bg-gray-50 border border-gray-100 rounded-xl p-3 text-center">
               <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Economic Benefit</p>
@@ -313,12 +293,12 @@ export default function GovDashboard({ reportData, sessionId, onBack }) {
         </div>
 
         {/* Implementation Phases + Gantt */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5">
           <p className="text-sm font-bold text-gray-800 mb-0.5">Implementation Phases</p>
           <p className="text-[10px] text-gray-400 mb-4">Estimated {totalMonths}-month sector retrofit plan</p>
           {phases.length > 0 ? (
             <>
-              <div className="grid grid-cols-3 gap-3 mb-5">
+              <div className="grid grid-cols-1 xs:grid-cols-3 gap-3 mb-5">
                 {phases.map((p,i)=>(
                   <div key={i} className="rounded-xl border p-3" style={{borderColor:p.color+"33",background:p.color+"08"}}>
                     <p className="text-[10px] uppercase tracking-wider font-semibold mb-1" style={{color:p.color}}>Phase {i+1}</p>
@@ -328,9 +308,9 @@ export default function GovDashboard({ reportData, sessionId, onBack }) {
                   </div>
                 ))}
               </div>
-              <div className="space-y-2.5">
-                <div className="flex items-center gap-3">
-                  <span className="w-40 shrink-0"/>
+              <div className="space-y-2.5 overflow-x-auto">
+                <div className="flex items-center gap-3 min-w-[400px]">
+                  <span className="w-32 sm:w-40 shrink-0"/>
                   <div className="flex-1 flex justify-between">
                     {Array.from({length:Math.min(totalMonths,18)},(_,i)=>(
                       <span key={i} className="text-[9px] text-gray-400">M{i+1}</span>
@@ -342,8 +322,8 @@ export default function GovDashboard({ reportData, sessionId, onBack }) {
                   const width=((p.months/totalMonths)*100).toFixed(1);
                   offset+=p.months;
                   return (
-                    <div key={i} className="flex items-center gap-3">
-                      <span className="text-xs text-gray-500 w-40 text-right shrink-0">{p.label}</span>
+                    <div key={i} className="flex items-center gap-3 min-w-[400px]">
+                      <span className="text-xs text-gray-500 w-32 sm:w-40 text-right shrink-0">{p.label}</span>
                       <div className="flex-1 h-6 bg-gray-100 rounded-full relative overflow-hidden">
                         <div className="absolute h-6 rounded-full flex items-center px-2.5"
                           style={{left:`${left}%`,width:`${width}%`,background:p.color}}>
@@ -360,7 +340,7 @@ export default function GovDashboard({ reportData, sessionId, onBack }) {
 
         {/* Risk Summary */}
         {riskSummary.length > 0 && (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5">
             <p className="text-sm font-bold text-gray-800 mb-3">Risk Assessment Summary</p>
             <div className="space-y-2">
               {riskSummary.map((r,i)=>(
@@ -375,12 +355,12 @@ export default function GovDashboard({ reportData, sessionId, onBack }) {
 
         {/* Policy Recommendations */}
         {actionRecs.length > 0 && (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5">
             <p className="text-sm font-bold text-gray-800 mb-0.5">Policy Recommendations</p>
             <p className="text-[10px] text-gray-400 mb-4">Priority actions for sector resilience</p>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {actionRecs.map((a,i)=>(
-                <div key={i} className="flex gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                <div key={i} className="flex gap-2 sm:gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
                   <div className="w-6 h-6 rounded-full bg-[#6B46C1] text-white text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">{i+1}</div>
                   <p className="text-xs text-gray-600 leading-relaxed">{a}</p>
                 </div>

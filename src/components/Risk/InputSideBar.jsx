@@ -32,18 +32,29 @@ const FIELDS = [
 const inputCls =
   "w-full px-3 py-2.5 rounded-lg bg-gray-50 border border-gray-200 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-[#6B46C1] focus:ring-1 focus:ring-[#6B46C1]/20 transition";
 
-export default function InputSideBar({ formData, onChange, results }) {
+export default function InputSideBar({ formData, onChange, results, onClose, showClose }) {
   const blockInvalidChars = (e) =>
     ["e", "E", "+", "-"].includes(e.key) && e.preventDefault();
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col p-5 gap-5 overflow-y-auto shrink-0">
+    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col p-5 gap-5 overflow-y-auto shrink-0 h-full">
 
-      {/* Header */}
+      {/* Header row with optional close button */}
       <div>
-        <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1">
-          Parameters
-        </p>
+        <div className="flex items-start justify-between mb-1">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+            Parameters
+          </p>
+          {/* Close button — only visible on mobile when panel is open */}
+          {showClose && (
+            <button
+              onClick={onClose}
+              className="lg:hidden w-6 h-6 rounded-md bg-gray-100 flex items-center justify-center text-gray-500 text-xs font-bold hover:bg-gray-200 transition shrink-0"
+            >
+              ✕
+            </button>
+          )}
+        </div>
         <h2 className="text-base font-black text-gray-900 leading-tight">
           Simulation <span className="text-[#6B46C1] italic">Inputs</span>
         </h2>
@@ -51,13 +62,15 @@ export default function InputSideBar({ formData, onChange, results }) {
           Configure earthquake parameters to run impact analysis.
         </p>
       </div>
-{/* Info box at bottom */}
+
+      {/* Info box */}
       <div className="mt-auto bg-[#6B46C1]/5 border border-[#6B46C1]/15 rounded-xl p-3">
         <p className="text-[10px] font-bold text-[#6B46C1] mb-1 uppercase tracking-wider">How it works</p>
         <p className="text-[10px] text-gray-500 leading-relaxed">
           Enter city names and seismic parameters. The model predicts PGA, damage level, and recommended actions.
         </p>
       </div>
+
       {/* Divider */}
       <div className="h-px bg-gray-100" />
 
@@ -79,6 +92,7 @@ export default function InputSideBar({ formData, onChange, results }) {
               step={f.type === "number" ? "0.1" : undefined}
               onKeyDown={f.type === "number" ? blockInvalidChars : undefined}
               onChange={onChange}
+              value={formData[f.name]}
               placeholder={f.placeholder}
               className={inputCls}
             />

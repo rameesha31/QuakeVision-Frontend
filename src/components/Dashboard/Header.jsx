@@ -17,28 +17,45 @@ export default function Header() {
 
   return (
     <>
+      {/* ── Main header row ── */}
       <div className="flex items-center justify-between w-full">
-        {/* Left: title + live pulse */}
-        <div className="flex items-center gap-3">
+
+        {/* Left: title block + Live badge — all vertically centred together */}
+        <div className="flex items-center gap-3 pl-10 lg:pl-0">
+
+          {/* Title stacked text */}
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-[#6B46C1] mb-0.5">
               QuakeVision AI
             </p>
-            <h2 className="text-xl font-black text-gray-900 leading-none">
+            <h2 className="text-lg sm:text-xl font-black text-gray-900 leading-none">
               Intelligence Dashboard
             </h2>
           </div>
-          {/* Live indicator */}
-          <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-full px-3 py-1">
+
+          {/*
+            Live badge — self-aligned to center so it sits on the same
+            horizontal axis as the h2 text, not shifted up/down.
+          */}
+          <div
+            className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-full px-2.5 py-1 self-end mb-0.5"
+          >
             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-            <span className="text-[10px] font-bold text-green-600 uppercase tracking-wider">Live</span>
+            <span className="text-[10px] font-bold text-green-600 uppercase tracking-wider">
+              Live
+            </span>
           </div>
         </div>
 
         {/* Right: Bell icon */}
-        <div className="relative cursor-pointer" onClick={() => setShowNotifications(p => !p)}>
+        <div
+          className="relative cursor-pointer"
+          onClick={() => setShowNotifications(p => !p)}
+        >
           <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
-            showNotifications ? "bg-[#6B46C1] text-white" : "bg-gray-100 hover:bg-[#6B46C1]/10 text-gray-500 hover:text-[#6B46C1]"
+            showNotifications
+              ? "bg-[#6B46C1] text-white"
+              : "bg-gray-100 hover:bg-[#6B46C1]/10 text-gray-500 hover:text-[#6B46C1]"
           }`}>
             <Bell size={16} />
           </div>
@@ -50,14 +67,16 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Notification panel */}
+      {/* ── Notification panel ── */}
       {showNotifications && (
         <>
+          {/* Backdrop */}
           <div
             className="fixed inset-0 z-[998]"
             onClick={() => setShowNotifications(false)}
           />
-          <div className="fixed top-0 right-0 h-full w-80 bg-white border-l border-gray-200 shadow-2xl z-[999] flex flex-col">
+          {/* Drawer — full width on mobile, 320px on sm+ */}
+          <div className="fixed top-0 right-0 h-full w-full sm:w-80 bg-white border-l border-gray-200 shadow-2xl z-[999] flex flex-col">
             {/* Panel header */}
             <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between shrink-0">
               <div>
@@ -74,7 +93,7 @@ export default function Header() {
               </button>
             </div>
 
-            {/* Items */}
+            {/* Notification items */}
             <div className="flex-1 overflow-y-auto">
               {notifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-48 gap-3">
@@ -85,8 +104,10 @@ export default function Header() {
                 </div>
               ) : (
                 notifications.map((n, i) => (
-                  <div key={i}
-                    className="px-5 py-4 border-b border-gray-100 hover:bg-[#6B46C1]/4 transition-all cursor-pointer">
+                  <div
+                    key={i}
+                    className="px-5 py-4 border-b border-gray-100 hover:bg-[#6B46C1]/4 transition-all cursor-pointer"
+                  >
                     <div className="flex items-start gap-3">
                       <div className="w-2 h-2 rounded-full bg-[#6B46C1] shrink-0 mt-1.5" />
                       <div>

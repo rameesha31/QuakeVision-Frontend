@@ -2,19 +2,32 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Activity, AlertTriangle, RefreshCw } from "lucide-react";
 import StatCard from "../components/Dashboard/StatCard";
-import Sidebar from "../components/Dashboard/Sidebar";
+import Sidebar, { useIsDesktop, SidebarToggleButton } from "../components/Dashboard/Sidebar";
 import Header from "../components/Dashboard/Header";
 import EarthquakeMap from "../components/Dashboard/EarthquakeMap";
 import EventsTable from "../components/Dashboard/EventsTable";
 import { getCityName } from "../utils/geocoding";
 
 export default function Dashboard() {
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
+  const isDesktop = useIsDesktop();
 
   const [rows, setRows]                         = useState([]);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [loading, setLoading]                   = useState(true);
   const [lastUpdated, setLastUpdated]           = useState(null);
+  const [windowWidth, setWindowWidth]           = useState(
+    typeof window !== "undefined" ? window.innerWidth : 1280
+  );
+
+  useEffect(() => {
+    const handler = () => setWindowWidth(window.innerWidth);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+
+  const sm = windowWidth >= 640;
+  const lg = windowWidth >= 1024;
 
   const fetchQuakes = async () => {
     setLoading(true);
@@ -76,23 +89,46 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  const highCount = rows.filter(r => r.mag >= 5).length;
+  const highCount  = rows.filter(r => r.mag >= 5).length;
+  const mapHeight  = lg ? 430 : sm ? 350 : 280;
+  const contentPad = sm ? 24 : 16;
 
   return (
-    <div className="min-h-screen w-full flex bg-[#F7F8FC] text-gray-900">
+    <div style={{
+      display: "flex", minHeight: "100vh", width: "100%",
+      background: "#F7F8FC", color: "#111827", overflow: "hidden",
+    }}>
       <Sidebar />
 
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main style={{
+        flex: 1, minWidth: 0, height: "100vh",
+        display: "flex", flexDirection: "column", overflow: "hidden",
+      }}>
 
         {/* ── TOP BAR ── */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4 shrink-0">
-          {/* Back buttons */}
-          <div className="flex items-center gap-3 mb-3">
+        <div style={{
+          background: "#fff", borderBottom: "1px solid #E5E7EB",
+          padding: sm ? "10px 24px" : "10px 16px",
+          flexShrink: 0,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            {/* Hamburger — only on mobile */}
+            {!isDesktop && (
+              <SidebarToggleButton onClick={() => window.__sidebarOpen?.()} />
+            )}
+            <span style={{ color: "#D1D5DB", fontSize: 12 }}>|</span>
             <button
               onClick={() => navigate("/")}
-              className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-[#6B46C1] transition-colors"
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                fontSize: 12, fontWeight: 600, color: "#6B7280",
+                background: "none", border: "none", cursor: "pointer",
+                padding: 0, transition: "color 0.15s",
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = "#6B46C1"}
+              onMouseLeave={e => e.currentTarget.style.color = "#6B7280"}
             >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
               Back to Home
@@ -102,90 +138,95 @@ export default function Dashboard() {
         </div>
 
         {/* ── SCROLLABLE CONTENT ── */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+        <div style={{
+          flex: 1, overflowY: "auto", padding: contentPad,
+          display: "flex", flexDirection: "column", gap: sm ? 20 : 16,
+        }}>
 
           {/* Stats row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl">
-            <StatCard
-              icon={<Activity size={16} />}
-              color="purple"
-              title="Seismic Monitoring"
-              value="Live"
-              sub="Pakistan Region"
-            />
-            <StatCard
-              icon={<AlertTriangle size={16} />}
-              color="red"
-              title="Recent Events"
-              value={loading ? "—" : rows.length}
-              sub="Last 2 years · Pakistan"
-            />
-            <StatCard
-              icon={<AlertTriangle size={16} />}
-              color="blue"
-              title="High Risk Events"
-              value={loading ? "—" : highCount}
-              sub="Magnitude ≥ 5.0"
-            />
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: sm ? "repeat(3, 1fr)" : "1fr",
+            gap: sm ? 16 : 12,
+            maxWidth: 768,
+          }}>
+            <StatCard icon={<Activity size={16} />}      color="purple" title="Seismic Monitoring" value="Live"                        sub="Pakistan Region"         />
+            <StatCard icon={<AlertTriangle size={16} />} color="red"    title="Recent Events"      value={loading ? "—" : rows.length} sub="Last 2 years · Pakistan" />
+            <StatCard icon={<AlertTriangle size={16} />} color="blue"   title="High Risk Events"   value={loading ? "—" : highCount}   sub="Magnitude ≥ 5.0"         />
           </div>
 
-          {/* Map + Events — side by side, same height */}
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start">
+          {/* Map + Events grid */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: lg ? "3fr 1fr" : "1fr",
+            gap: sm ? 20 : 16,
+            alignItems: "start",
+          }}>
 
             {/* Map card */}
-            <div className="lg:col-span-3 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden flex flex-col">
-              {/* Map header */}
-              <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 shrink-0">
+            <div style={{
+              background: "#fff", border: "1px solid #E5E7EB",
+              borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+              overflow: "hidden", display: "flex", flexDirection: "column",
+            }}>
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: sm ? "14px 20px" : "12px 16px",
+                borderBottom: "1px solid #F3F4F6", flexShrink: 0,
+              }}>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#6B46C1] mb-0.5">
+                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#6B46C1", marginBottom: 2 }}>
                     USGS Data
                   </p>
-                  <h3 className="text-sm font-black text-gray-900">Live Seismic Map</h3>
+                  <h3 style={{ fontSize: 14, fontWeight: 900, color: "#111827", margin: 0 }}>Live Seismic Map</h3>
                 </div>
-                <div className="flex items-center gap-3">
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  {/* Show lastUpdated always (from file 2), not gated on sm */}
                   {lastUpdated && (
-                    <span className="text-[10px] text-gray-400">
-                      Updated {lastUpdated}
-                    </span>
+                    <span style={{ fontSize: 10, color: "#9CA3AF" }}>Updated {lastUpdated}</span>
                   )}
                   <button
                     onClick={fetchQuakes}
                     disabled={loading}
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all ${
-                      loading
-                        ? "bg-gray-100 text-gray-300 cursor-not-allowed"
-                        : "bg-[#6B46C1]/10 text-[#6B46C1] hover:bg-[#6B46C1]/20"
-                    }`}
+                    style={{
+                      width: 28, height: 28, borderRadius: 8,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      background: loading ? "#F3F4F6" : "#6B46C110",
+                      color: loading ? "#D1D5DB" : "#6B46C1",
+                      border: "none", cursor: loading ? "not-allowed" : "pointer",
+                      transition: "all 0.15s",
+                    }}
                   >
-                    <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+                    <RefreshCw size={13} style={{ animation: loading ? "spin 1s linear infinite" : "none" }} />
                   </button>
                 </div>
               </div>
 
-              {/* Map legend */}
-              <div className="flex items-center gap-4 px-5 py-2 bg-gray-50 border-b border-gray-100 shrink-0">
+              {/* Legend */}
+              <div style={{
+                display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap",
+                padding: "8px 20px", background: "#F9FAFB",
+                borderBottom: "1px solid #F3F4F6", flexShrink: 0,
+              }}>
                 {[
                   { color: "#EF4444", label: "High (≥5.0)" },
                   { color: "#F59E0B", label: "Moderate (3–5)" },
                   { color: "#10B981", label: "Low (<3.0)" },
                 ].map(l => (
-                  <div key={l.label} className="flex items-center gap-1.5">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ background: l.color }} />
-                    <span className="text-[10px] text-gray-500 font-medium">{l.label}</span>
+                  <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: "50%", background: l.color }} />
+                    <span style={{ fontSize: 10, color: "#6B7280", fontWeight: 500 }}>{l.label}</span>
                   </div>
                 ))}
               </div>
 
-              {/* Map — height synced with events panel (≈500px) */}
-              <div className="h-[430px]">
+              <div style={{ height: mapHeight }}>
                 <EarthquakeMap rows={rows} selectedLocation={selectedLocation} />
               </div>
             </div>
 
-            {/* Events panel — same total visual height */}
-            <div className="lg:col-span-1">
-              <EventsTableFull rows={rows} onSelect={setSelectedLocation} />
-            </div>
+            {/* Events panel */}
+            <EventsTableFull rows={rows} onSelect={setSelectedLocation} isSm={sm} />
           </div>
 
         </div>
@@ -194,8 +235,8 @@ export default function Dashboard() {
   );
 }
 
-// ── Inline EventsTable with full location names ───────────────────────────
-function EventsTableFull({ rows, onSelect }) {
+// ── Inline events list ─────────────────────────────────────────────────────
+function EventsTableFull({ rows, onSelect, isSm }) {
   const magMeta = (mag) => {
     if (mag >= 5) return { color: "#EF4444", bg: "#FEF2F2", label: "High",     border: "#FECACA" };
     if (mag >= 3) return { color: "#F59E0B", bg: "#FFFBEB", label: "Moderate", border: "#FDE68A" };
@@ -203,30 +244,38 @@ function EventsTableFull({ rows, onSelect }) {
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl shadow-sm flex flex-col" style={{ height: "520px" }}>
-
-      {/* Header */}
-      <div className="px-5 py-4 border-b border-gray-100 shrink-0">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[#6B46C1] mb-0.5">
-              Live Feed
-            </p>
-            <h3 className="font-black text-gray-900 text-sm">Recent Events</h3>
-          </div>
-          <span className="flex items-center gap-1.5 text-[10px] font-semibold text-green-600 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-            Updating
-          </span>
+    <div style={{
+      background: "#fff", border: "1px solid #E5E7EB",
+      borderRadius: 16, boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+      display: "flex", flexDirection: "column", height: 520,
+    }}>
+      <div style={{
+        padding: isSm ? "14px 20px" : "12px 16px",
+        borderBottom: "1px solid #F3F4F6", flexShrink: 0,
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+      }}>
+        <div>
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#6B46C1", marginBottom: 2 }}>
+            Live Feed
+          </p>
+          <h3 style={{ fontSize: 14, fontWeight: 900, color: "#111827", margin: 0 }}>Recent Events</h3>
         </div>
+        <span style={{
+          display: "flex", alignItems: "center", gap: 6,
+          fontSize: 10, fontWeight: 600, color: "#16A34A",
+          background: "#F0FDF4", border: "1px solid #BBF7D0",
+          padding: "4px 10px", borderRadius: 999,
+        }}>
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22C55E", animation: "pulse 2s infinite" }} />
+          Updating
+        </span>
       </div>
 
-      {/* Scrollable list */}
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
+      <div style={{ flex: 1, overflowY: "auto", padding: isSm ? "12px" : "8px", display: "flex", flexDirection: "column", gap: 8 }}>
         {rows.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center text-xl">🌍</div>
-            <p className="text-sm text-gray-400 font-medium">Fetching seismic data...</p>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: "#F3F4F6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🌍</div>
+            <p style={{ fontSize: 14, color: "#9CA3AF", fontWeight: 500 }}>Fetching seismic data...</p>
           </div>
         ) : (
           rows.map((r, i) => {
@@ -235,32 +284,39 @@ function EventsTableFull({ rows, onSelect }) {
               <div
                 key={i}
                 onClick={() => onSelect(r)}
-                className="group flex items-start gap-3 p-3 rounded-xl border border-gray-100 bg-gray-50/60 hover:bg-[#6B46C1]/5 hover:border-[#6B46C1]/20 cursor-pointer transition-all"
+                style={{
+                  display: "flex", alignItems: "flex-start", gap: 10,
+                  padding: "10px 12px", borderRadius: 12,
+                  border: "1px solid #F3F4F6", background: "#FAFAFA",
+                  cursor: "pointer", transition: "all 0.15s",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = "#6B46C108"; e.currentTarget.style.borderColor = "#6B46C130"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "#FAFAFA";   e.currentTarget.style.borderColor = "#F3F4F6"; }}
               >
-                {/* Mag badge */}
-                <div className="shrink-0 flex flex-col items-center justify-center w-11 h-11 rounded-xl border"
-                  style={{ background: m.bg, borderColor: m.border }}>
-                  <span className="text-sm font-black leading-none" style={{ color: m.color }}>
-                    {r.mag}
-                  </span>
-                  <span className="text-[8px] font-bold uppercase mt-0.5" style={{ color: m.color }}>
-                    Mw
-                  </span>
+                <div style={{
+                  flexShrink: 0, display: "flex", flexDirection: "column",
+                  alignItems: "center", justifyContent: "center",
+                  width: 42, height: 42, borderRadius: 10,
+                  background: m.bg, border: `1px solid ${m.border}`,
+                }}>
+                  <span style={{ fontSize: 14, fontWeight: 900, lineHeight: 1, color: m.color }}>{r.mag}</span>
+                  <span style={{ fontSize: 8, fontWeight: 700, textTransform: "uppercase", marginTop: 2, color: m.color }}>Mw</span>
                 </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2 mb-0.5">
-                    <p className="text-xs font-bold text-gray-800 break-words leading-snug">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 2 }}>
+                    <p style={{ fontSize: 12, fontWeight: 700, color: "#111827", wordBreak: "break-word", lineHeight: 1.3, margin: 0 }}>
                       {r.location}
                     </p>
-                    <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap"
-                      style={{ background: m.bg, color: m.color, border: `1px solid ${m.border}` }}>
+                    <span style={{
+                      flexShrink: 0, fontSize: 10, fontWeight: 600,
+                      padding: "2px 6px", borderRadius: 999, whiteSpace: "nowrap",
+                      background: m.bg, color: m.color, border: `1px solid ${m.border}`,
+                    }}>
                       {m.label}
                     </span>
                   </div>
-                  <p className="text-[10px] text-gray-400">{r.date} · {r.time}</p>
-                  <p className="text-[10px] text-gray-400">Depth: {r.depth}</p>
+                  <p style={{ fontSize: 10, color: "#9CA3AF", margin: 0 }}>{r.date} · {r.time}</p>
+                  <p style={{ fontSize: 10, color: "#9CA3AF", margin: 0 }}>Depth: {r.depth}</p>
                 </div>
               </div>
             );

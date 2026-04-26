@@ -1,7 +1,6 @@
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from "recharts";
 import { Downloadreport } from "./Downloadreport";
 
-// ── Helpers ────────────────────────────────────────────────────────────────
 function formatPKR(n) {
   n = Math.round(n);
   if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(2) + "B";
@@ -30,7 +29,6 @@ function safeNum(v, def = 0) {
   return isNaN(n) ? def : n;
 }
 
-// ── Sub-components ─────────────────────────────────────────────────────────
 function RiskBar({ label, value, max, color }) {
   const val = safeNum(value, 0);
   const mx  = safeNum(max, 1);
@@ -52,7 +50,7 @@ function ResourceCard({ label, value, color }) {
   return (
     <div className="bg-gray-50 rounded-xl border border-gray-100 p-3">
       <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-1">{label}</p>
-      <p className="text-xl font-black" style={{ color }}>{value}</p>
+      <p className="text-lg sm:text-xl font-black" style={{ color }}>{value}</p>
       <div className="h-0.5 rounded-full mt-2" style={{ background: color, opacity: 0.35 }} />
     </div>
   );
@@ -77,7 +75,6 @@ const PHASE_COLORS = {
   inspection_certification: "#3B82F6",
 };
 
-// Budget level → package key mapping
 const BUDGET_LEVEL_MAP = {
   low:      "basic",
   moderate: "standard",
@@ -90,30 +87,8 @@ const BUDGET_LEVEL_COLOR = {
   high:     "#EF4444",
 };
 
-// ══════════════════════════════════════════════════════════════════════════════
-// MAIN COMPONENT
-// ══════════════════════════════════════════════════════════════════════════════
 export default function HomeDashboard({ reportData, sessionId, onBack }) {
 
-  // ── DEBUG LOGGING ──────────────────────────────────────────────────────────
-  console.log("🏠 HomeDashboard received reportData:", reportData);
-  console.log("🏠 session_id:", sessionId);
-  console.log("🏠 visualization_data:", reportData?.visualization_data);
-  console.log("🏠 viz keys:", reportData?.visualization_data ? Object.keys(reportData.visualization_data) : "NONE");
-  console.log("🏠 risk_assessment:", reportData?.visualization_data?.risk_assessment);
-  console.log("🏠 project_info:", reportData?.visualization_data?.project_info);
-  console.log("🏠 cost_options:", reportData?.visualization_data?.cost_options);
-  console.log("🏠 retrofit_steps:", reportData?.visualization_data?.retrofit_steps);
-  console.log("🏠 timeline:", reportData?.visualization_data?.timeline);
-  console.log("🏠 risk_scores_by_material:", reportData?.visualization_data?.risk_scores_by_material);
-  console.log("🏠 risk_assessment_summary:", reportData?.risk_assessment_summary);
-  console.log("🏠 action_recommendations:", reportData?.action_recommendations);
-  console.log("🏠 full_detailed_report (length):", reportData?.full_detailed_report?.length || 0);
-  console.log("🏠 validation_score:", reportData?.validation_score);
-  console.log("🏠 is_validated:", reportData?.is_validated);
-  console.log("🏠 is_fallback:", reportData?.is_fallback);
-
-  // ── DATA EXTRACTION ────────────────────────────────────────────────────────
   const viz      = reportData?.visualization_data || {};
   const risk     = viz.risk_assessment || {};
   const proj     = viz.project_info || {};
@@ -127,7 +102,6 @@ export default function HomeDashboard({ reportData, sessionId, onBack }) {
   const occ     = risk.occupancy_status || "";
   const riskLvl = risk.risk_level || "";
 
-  // ── BUDGET LEVEL → PACKAGE MAPPING ────────────────────────────────────────
   const budgetLevelKey  = proj.budget_level?.toLowerCase() || "moderate";
   const budgetKey       = BUDGET_LEVEL_MAP[budgetLevelKey] || costs.recommended || "standard";
   const selectedCost    = costs[budgetKey] || {};
@@ -147,7 +121,6 @@ export default function HomeDashboard({ reportData, sessionId, onBack }) {
   const phases      = timeline.phases || {};
   const totalMonths = safeNum(timeline.total_months, 1);
 
-  // Resources derived from steps + project
   const totalWeeks = Object.values(steps).reduce((a, s) => a + safeNum(s.weeks, 0), 0);
   const resources = [
     { label: "Steel Rebar", value: `${(safeNum(proj.total_sqft, 0) * 0.0025).toFixed(1)} Tons`, color: "#3B82F6" },
@@ -173,15 +146,14 @@ export default function HomeDashboard({ reportData, sessionId, onBack }) {
     ? "bg-amber-50 border-amber-200 text-amber-700"
     : "bg-red-50 border-red-200 text-red-700";
 
-  // ── RENDER ─────────────────────────────────────────────────────────────────
   return (
     <div className="flex flex-1 overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-6 space-y-5">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-5 lg:p-6 space-y-4 sm:space-y-5">
 
         {/* ── HEADER ── */}
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-1">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
               <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${riskClass}`}>
                 ◉ {riskLvl.toUpperCase() || "UNKNOWN"} RISK
               </span>
@@ -197,22 +169,22 @@ export default function HomeDashboard({ reportData, sessionId, onBack }) {
                 </span>
               )}
             </div>
-            <h2 className="text-4xl font-black text-gray-900 leading-none">Intelligence Report</h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <h2 className="text-3xl sm:text-4xl font-black text-gray-900 leading-none">Intelligence Report</h2>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1 leading-relaxed">
               {proj.material || "—"} Structure &nbsp;•&nbsp; {capFirst(proj.building_type)} &nbsp;•&nbsp;
               Magnitude Mw {proj.magnitude || "—"} &nbsp;•&nbsp; {safeNum(proj.total_sqft, 0).toLocaleString()} sq ft
             </p>
           </div>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap shrink-0">
             <button
               onClick={onBack}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-500 text-xs font-semibold hover:border-gray-300 transition-all"
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg border border-gray-200 bg-white text-gray-500 text-xs font-semibold hover:border-gray-300 transition-all"
             >
               ✏ Modify
             </button>
             <button
               onClick={() => Downloadreport(reportData)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#6B46C1] text-white text-xs font-semibold hover:bg-[#5a38a8] transition-all shadow-sm"
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-lg bg-[#6B46C1] text-white text-xs font-semibold hover:bg-[#5a38a8] transition-all shadow-sm"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -223,11 +195,11 @@ export default function HomeDashboard({ reportData, sessionId, onBack }) {
           </div>
         </div>
 
-        {/* ── KPI ROW ── */}
-        <div className="grid grid-cols-4 gap-3">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+        {/* ── KPI ROW — 2 cols on mobile, 4 on desktop ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-3 sm:p-4">
             <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2">Safety Index</p>
-            <p className="text-3xl font-black leading-none" style={{ color: gaugeColor }}>{Math.round(surv)}%</p>
+            <p className="text-2xl sm:text-3xl font-black leading-none" style={{ color: gaugeColor }}>{Math.round(surv)}%</p>
             <p className="text-[10px] text-gray-400 mt-1.5">Survival probability at Mw {proj.magnitude || "—"}</p>
             <div className="mt-2 h-1.5 bg-gray-100 rounded-full">
               <div className="h-1.5 rounded-full" style={{ width: `${Math.min(surv, 100)}%`, background: gaugeColor }} />
@@ -237,17 +209,16 @@ export default function HomeDashboard({ reportData, sessionId, onBack }) {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-3 sm:p-4">
             <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2">Collapse Risk</p>
-            <p className="text-3xl font-black leading-none text-[#6B46C1]">{Number(coll).toFixed(1)}%</p>
+            <p className="text-2xl sm:text-3xl font-black leading-none text-[#6B46C1]">{Number(coll).toFixed(1)}%</p>
             <p className="text-[10px] text-gray-400 mt-1.5">Damage risk probability</p>
           </div>
 
-          {/* ── BUDGET LEVEL CARD ── */}
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-3 sm:p-4">
             <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2">Budget Level</p>
             <span
-              className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold text-white mt-0.5"
+              className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-bold text-white mt-0.5"
               style={{ background: budgetColor }}
             >
               {capFirst(proj.budget_level || "Moderate")}
@@ -257,9 +228,9 @@ export default function HomeDashboard({ reportData, sessionId, onBack }) {
             </p>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-3 sm:p-4">
             <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-2">Occupancy Status</p>
-            <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-full border mt-1 ${occClass}`}>
+            <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-full border mt-1 ${occClass}`}>
               <span className="w-1.5 h-1.5 rounded-full bg-current" />
               {occ || "—"}
             </span>
@@ -267,9 +238,9 @@ export default function HomeDashboard({ reportData, sessionId, onBack }) {
           </div>
         </div>
 
-        {/* ── ROW 1: Structural Hazards + Cost Allocation ── */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+        {/* ── Structural Hazards + Cost Allocation — stack on mobile ── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5">
             <p className="text-sm font-bold text-gray-800 mb-0.5">Structural Hazards</p>
             <p className="text-[10px] text-gray-400 mb-4">Risk score by material type (0–10 scale)</p>
             {scoreEntries.length > 0 ? (
@@ -284,23 +255,23 @@ export default function HomeDashboard({ reportData, sessionId, onBack }) {
             )}
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5">
             <p className="text-sm font-bold text-gray-800 mb-0.5">Cost Allocation</p>
             <p className="text-[10px] text-gray-400 mb-3">Retrofit package breakdown</p>
             {pieData.length > 0 ? (
               <div className="flex items-center gap-4">
-                <PieChart width={120} height={120}>
-                  <Pie data={pieData} cx={55} cy={55} innerRadius={32} outerRadius={52}
+                <PieChart width={110} height={110}>
+                  <Pie data={pieData} cx={50} cy={50} innerRadius={28} outerRadius={48}
                     dataKey="value" strokeWidth={0}>
                     {pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
                   </Pie>
                 </PieChart>
-                <div className="space-y-2">
+                <div className="space-y-2 flex-1 min-w-0">
                   {pieData.map((d, i) => (
                     <div key={d.name} className="flex items-center gap-2">
                       <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: PIE_COLORS[i] }} />
-                      <span className="text-[11px] text-gray-500">{d.name}</span>
-                      <span className="text-[11px] font-semibold text-gray-700 ml-auto">
+                      <span className="text-[11px] text-gray-500 truncate">{d.name}</span>
+                      <span className="text-[11px] font-semibold text-gray-700 ml-auto shrink-0">
                         {safeNum(d.value, 0) > 0 ? `PKR ${formatPKR(d.value)}` : "—"}
                       </span>
                     </div>
@@ -314,12 +285,12 @@ export default function HomeDashboard({ reportData, sessionId, onBack }) {
         </div>
 
         {/* ── COST OPTIONS ── */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5">
           <p className="text-sm font-bold text-gray-800 mb-1">Cost Options</p>
           <p className="text-[10px] text-gray-400 mb-3">
             Budget level <span className="font-semibold" style={{ color: budgetColor }}>{capFirst(proj.budget_level || "Moderate")}</span> ke mutabiq package auto-selected
           </p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 xs:grid-cols-3 gap-2">
             {["basic", "standard", "comprehensive"].map(k => {
               const t = costs[k]; if (!t) return null;
               const isSelected = budgetKey === k;
@@ -348,15 +319,15 @@ export default function HomeDashboard({ reportData, sessionId, onBack }) {
         </div>
 
         {/* ── GANTT ── */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5">
           <p className="text-sm font-bold text-gray-800 mb-0.5">Implementation Lifecycle</p>
           <p className="text-[10px] text-gray-400 mb-4">
             Estimated {totalMonths}-month execution pipeline
           </p>
           {Object.keys(phases).length > 0 ? (
-            <div className="space-y-2.5">
-              <div className="flex items-center gap-3">
-                <span className="w-40 shrink-0" />
+            <div className="space-y-2.5 overflow-x-auto">
+              <div className="flex items-center gap-3 min-w-[400px]">
+                <span className="w-32 sm:w-40 shrink-0" />
                 <div className="flex-1 flex justify-between">
                   {Array.from({ length: Math.min(totalMonths, 20) }, (_, i) => (
                     <span key={i} className="text-[9px] text-gray-400">M{i + 1}</span>
@@ -373,8 +344,8 @@ export default function HomeDashboard({ reportData, sessionId, onBack }) {
                     const width = ((mo / totalMonths) * 100).toFixed(1);
                     offset += mo;
                     return (
-                      <div key={key} className="flex items-center gap-3">
-                        <span className="text-xs text-gray-500 w-40 text-right shrink-0">
+                      <div key={key} className="flex items-center gap-3 min-w-[400px]">
+                        <span className="text-xs text-gray-500 w-32 sm:w-40 text-right shrink-0">
                           {capFirst(key.replace(/_/g, " "))}
                         </span>
                         <div className="flex-1 h-6 bg-gray-100 rounded-full relative overflow-hidden">
@@ -393,22 +364,22 @@ export default function HomeDashboard({ reportData, sessionId, onBack }) {
           )}
         </div>
 
-        {/* ── RETROFIT STEPS + IMPLEMENTATION RESOURCES ── */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+        {/* ── RETROFIT STEPS + RESOURCES — stack on mobile ── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5">
             <p className="text-sm font-bold text-gray-800 mb-0.5">Retrofit Steps</p>
             <p className="text-[10px] text-gray-400 mb-3">Execution sequence · weeks · cost estimate</p>
             {Object.keys(steps).length > 0 ? (
               <div className="space-y-2">
                 {Object.entries(steps).map(([key, s], i) => (
                   <div key={key}
-                    className="flex items-center gap-3 px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-100">
+                    className="flex items-center gap-2 sm:gap-3 px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-100">
                     <div className="w-6 h-6 rounded-full bg-[#6B46C1] text-white text-[10px] font-bold flex items-center justify-center shrink-0">
                       {i + 1}
                     </div>
-                    <span className="flex-1 text-xs text-gray-600">{capFirst(key)}</span>
-                    <span className="text-[11px] text-gray-400">{s.weeks}w</span>
-                    <span className="text-[11px] font-semibold text-amber-600 min-w-[60px] text-right">
+                    <span className="flex-1 text-xs text-gray-600 min-w-0 truncate">{capFirst(key)}</span>
+                    <span className="text-[11px] text-gray-400 shrink-0">{s.weeks}w</span>
+                    <span className="text-[11px] font-semibold text-amber-600 shrink-0 text-right">
                       {safeNum(s.cost_pkr, 0) > 0 ? `PKR ${formatPKR(s.cost_pkr)}` : "—"}
                     </span>
                   </div>
@@ -419,7 +390,7 @@ export default function HomeDashboard({ reportData, sessionId, onBack }) {
             )}
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5">
             <p className="text-sm font-bold text-gray-800 mb-0.5">Implementation Resources</p>
             <p className="text-[10px] text-gray-400 mb-3">Logistical requirements for retrofit</p>
             <div className="grid grid-cols-2 gap-2 mb-4">
@@ -441,7 +412,7 @@ export default function HomeDashboard({ reportData, sessionId, onBack }) {
 
         {/* ── ACTION RECOMMENDATIONS ── */}
         {actionRecs.length > 0 && (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 pb-6">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 sm:p-5 pb-5 sm:pb-6">
             <div className="flex items-center gap-2 mb-3">
               <div className="w-2 h-2 rounded-full bg-green-500" />
               <p className="text-sm font-bold text-gray-800">Action Recommendations</p>
@@ -449,11 +420,11 @@ export default function HomeDashboard({ reportData, sessionId, onBack }) {
             <div className="space-y-2">
               {actionRecs.map((a, i) => (
                 <div key={i}
-                  className="flex items-start gap-3 px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl hover:border-[#6B46C1]/20 hover:bg-[#6B46C1]/5 transition-all">
+                  className="flex items-start gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 bg-gray-50 border border-gray-100 rounded-xl hover:border-[#6B46C1]/20 hover:bg-[#6B46C1]/5 transition-all">
                   <div className="w-6 h-6 rounded-full bg-[#6B46C1] text-white text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
                     {i + 1}
                   </div>
-                  <p className="text-sm text-gray-700 leading-relaxed">{a}</p>
+                  <p className="text-xs sm:text-sm text-gray-700 leading-relaxed">{a}</p>
                 </div>
               ))}
             </div>

@@ -39,13 +39,14 @@ export default function TrendsGraph({ trends, singleResult }) {
       {/* Section label */}
       <div className="flex items-center gap-3">
         <div className="h-px flex-1 bg-gray-200" />
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest whitespace-nowrap">
           Seismic Trend Analysis
         </p>
         <div className="h-px flex-1 bg-gray-200" />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      {/* Charts: stack on mobile, side-by-side on sm+ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
         {/* Chart 1: Single point — Magnitude vs PGA */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">

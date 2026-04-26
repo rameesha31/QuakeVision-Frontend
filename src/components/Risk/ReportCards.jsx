@@ -30,8 +30,8 @@ export default function ReportCards({ results, formData }) {
   return (
     <div className="space-y-4">
 
-      {/* ── Row 1: 3 cards ── */}
-      <div className="grid grid-cols-3 gap-4">
+      {/* ── Row 1: 3 cards — stack on mobile, row on md+ ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 
         {/* Aggregate Safety Index */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
@@ -72,7 +72,7 @@ export default function ReportCards({ results, formData }) {
         </div>
 
         {/* Seismic Profile */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 sm:col-span-2 lg:col-span-1">
           <p className="text-xs font-bold text-gray-700 uppercase tracking-wider mb-0.5">
             Seismic Profile
           </p>
@@ -107,7 +107,7 @@ export default function ReportCards({ results, formData }) {
         </div>
 
         {actions.length > 0 ? (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {actions.map((action, i) => (
               <div
                 key={i}

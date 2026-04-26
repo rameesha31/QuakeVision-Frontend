@@ -70,17 +70,19 @@ export default function HomeInput({ onGenerate, loading }) {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-8">
-      <div className="max-w-2xl">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      {/* Max width container — full on mobile, capped on desktop */}
+      <div className="w-full max-w-2xl mx-auto lg:mx-0">
+
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-3">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3">
             <span className="inline-flex items-center gap-1.5 text-[10px] font-bold px-3 py-1 rounded-full bg-red-50 border border-red-200 text-red-600 uppercase tracking-wider">
               ⚡ Home Safety Module
             </span>
             <span className="text-xs text-gray-400 uppercase tracking-widest">Simulation Ready</span>
           </div>
-          <h1 className="text-4xl font-black text-gray-900 leading-none">
+          <h1 className="text-3xl sm:text-4xl font-black text-gray-900 leading-none">
             Home <span className="text-[#6B46C1] italic">Safety</span>
           </h1>
           <p className="text-sm text-gray-400 mt-2">
@@ -88,10 +90,10 @@ export default function HomeInput({ onGenerate, loading }) {
           </p>
         </div>
 
-        <div className="space-y-5">
+        <div className="space-y-4 sm:space-y-5">
 
-          {/* City + Sector dropdowns */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* City + Sector — stack on very small screens */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Field label="City">
               <select value={formData.city_name}
                 onChange={e => set("city_name", e.target.value)}
@@ -111,18 +113,17 @@ export default function HomeInput({ onGenerate, loading }) {
             </Field>
           </div>
 
-          {/* Magnitude Slider — softer gradient */}
+          {/* Magnitude Slider */}
           <Field label="Simulated Magnitude">
-            <div className="flex items-center gap-5">
+            <div className="flex items-center gap-3 sm:gap-5">
               <div className="shrink-0">
-                <div className="text-3xl font-black text-[#6B46C1]">
+                <div className="text-2xl sm:text-3xl font-black text-[#6B46C1]">
                   {formData.magnitude.toFixed(1)}
                 </div>
                 <div className="text-[10px] text-gray-400 mt-0.5">Richter (Mw)</div>
               </div>
 
-              <div className="flex-1">
-                {/* Softer gradient track */}
+              <div className="flex-1 min-w-0">
                 <div className="relative h-2 rounded-full mb-2"
                   style={{ background: "linear-gradient(90deg, #86efac 0%, #fde68a 40%, #fdba74 70%, #fca5a5 100%)" }}>
                   <input
@@ -131,7 +132,6 @@ export default function HomeInput({ onGenerate, loading }) {
                     onChange={e => set("magnitude", parseFloat(e.target.value))}
                     className="absolute inset-0 w-full opacity-0 cursor-pointer h-2 z-10"
                   />
-                  {/* Custom thumb */}
                   <div
                     className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white border-2 border-[#6B46C1] shadow-md pointer-events-none transition-all"
                     style={{ left: `calc(${pct}% - 10px)` }}
@@ -142,20 +142,20 @@ export default function HomeInput({ onGenerate, loading }) {
                 </div>
               </div>
 
-              <div className="shrink-0 text-right min-w-[60px]">
+              <div className="shrink-0 text-right min-w-[55px]">
                 <div className="text-[10px] text-gray-400">Zone</div>
-                <div className={`text-sm font-bold mt-0.5 ${ZONE_COLORS[zone]}`}>{zone}</div>
+                <div className={`text-xs sm:text-sm font-bold mt-0.5 ${ZONE_COLORS[zone]}`}>{zone}</div>
               </div>
             </div>
           </Field>
 
-          {/* Material */}
+          {/* Material — 4 cols on sm+, 2 cols on xs */}
           <Field label="Structural Taxonomy">
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 xs:grid-cols-4 sm:grid-cols-4 gap-2">
               {MATERIALS.map(m => (
                 <button key={m.key}
                   onClick={() => set("material", m.key)}
-                  className={`py-2.5 rounded-xl border text-xs font-medium transition-all ${
+                  className={`py-2 sm:py-2.5 rounded-xl border text-xs font-medium transition-all ${
                     formData.material === m.key
                       ? "border-[#6B46C1] bg-[#6B46C1]/10 text-[#6B46C1]"
                       : "border-gray-200 bg-gray-50 text-gray-500 hover:border-gray-300 hover:text-gray-700"
@@ -168,7 +168,7 @@ export default function HomeInput({ onGenerate, loading }) {
           </Field>
 
           {/* Building type + floors */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Field label="Building Type">
               <select value={formData.building_type}
                 onChange={e => set("building_type", e.target.value)}
@@ -188,7 +188,7 @@ export default function HomeInput({ onGenerate, loading }) {
           </div>
 
           {/* Floor area + Budget */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Field label="Floor Area (sq ft)">
               <input type="number" min={100}
                 value={formData.project_size_sqft}
@@ -207,7 +207,7 @@ export default function HomeInput({ onGenerate, loading }) {
           </div>
 
           {/* Timeline + Web */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Field label="Implementation Timeline">
               <div className="flex gap-2">
                 <input type="number" min={1}
@@ -234,7 +234,7 @@ export default function HomeInput({ onGenerate, loading }) {
 
           {/* Submit */}
           <button onClick={handleSubmit} disabled={loading}
-            className={`w-full py-4 rounded-xl text-sm font-bold tracking-wider flex items-center justify-center gap-2 transition-all shadow-md ${
+            className={`w-full py-3.5 sm:py-4 rounded-xl text-sm font-bold tracking-wider flex items-center justify-center gap-2 transition-all shadow-md ${
               loading
                 ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                 : "bg-[#6B46C1] hover:bg-[#5a38a8] text-white hover:shadow-lg"

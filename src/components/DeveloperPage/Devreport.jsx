@@ -1,388 +1,482 @@
-// ── downloadDevReport.js ──────────────────────────────────────────────────
-// Import: import { Devreport } from "./downloadDevReport";
-
-function formatPKR(n) {
-  n = Math.round(n);
-  if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(2) + "B";
-  if (n >= 1_000_000)     return (n / 1_000_000).toFixed(1) + "M";
-  if (n >= 1_000)         return (n / 1_000).toFixed(0) + "K";
-  return n.toString();
-}
-
-function capFirst(s) {
-  return String(s || "").replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-}
-
-function stripMd(text) {
-  if (!text) return "";
-  return text
-    .replace(/^#{1,6}\s*/gm, "")
-    .replace(/\*\*(.+?)\*\*/g, "$1")
-    .replace(/\*(.+?)\*/g,   "$1")
-    .replace(/`(.+?)`/g,     "$1")
-    .replace(/\|/g, " · ")
-    .replace(/^[-•]\s+/gm,  "")
-    .replace(/^\d+\.\s+/gm, "")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-}
-
-function safeNum(v, def = 0) {
-  const n = Number(v);
-  return isNaN(n) ? def : n;
-}
-
-// Tries multiple keys in order, returns first non-null/undefined/empty hit
-function pick(obj, ...keys) {
-  if (!obj || typeof obj !== "object") return null;
-  for (const k of keys) {
-    const v = obj[k];
-    if (v !== undefined && v !== null && v !== "") return v;
-  }
-  return null;
-}
+// Devreport.js - Developer Feasibility Report Generator
 
 export async function Devreport(reportData) {
-  if (!reportData) return alert("No report data available.");
-
-  // ── DEEP DEBUG: log entire structure ─────────────────────────────────
-  console.group("[DevPDF] Full reportData inspection");
-  console.log("Top-level keys:", Object.keys(reportData));
-  const viz = reportData?.visualization_data || {};
-  console.log("visualization_data keys:", Object.keys(viz));
-  Object.entries(viz).forEach(([k, v]) => {
-    if (v && typeof v === "object") {
-      console.log(`  viz.${k} keys:`, Object.keys(v));
-      console.log(`  viz.${k} values:`, JSON.stringify(v, null, 2));
-    } else {
-      console.log(`  viz.${k} =`, v);
-    }
-  });
-  console.groupEnd();
+  if (!reportData) {
+    alert("No report data available.");
+    return;
+  }
 
   const { default: jsPDF } = await import("jspdf");
-  const doc = new jsPDF();
-  const W = doc.internal.pageSize.getWidth();
-  let y = 0;
+  const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
 
-  // ── Colour palette ────────────────────────────────────────────────────
-  const PURPLE = [107, 70, 193];
-  const DARK   = [30, 30, 50];
-  const GRAY   = [120, 120, 140];
-  const LIGHT  = [245, 245, 250];
-  const WHITE  = [255, 255, 255];
-  const GREEN  = [16, 185, 129];
-  const RED    = [220, 53, 69];
-  const AMBER  = [245, 158, 11];
-  const BLUE   = [59, 130, 246];
+  const PAGE_WIDTH    = doc.internal.pageSize.getWidth();
+  const PAGE_HEIGHT   = doc.internal.pageSize.getHeight();
+  const LEFT_MARGIN   = 15;
+  const RIGHT_MARGIN  = PAGE_WIDTH - 15;
+  const CONTENT_WIDTH = RIGHT_MARGIN - LEFT_MARGIN;
 
-  // ── Helpers ───────────────────────────────────────────────────────────
-  const checkPage = (n = 12) => { if (y + n > 275) { doc.addPage(); y = 20; } };
+  let y = 25;
+  let pageNum = 1;
 
-  const sectionTitle = (t) => {
-    checkPage(16);
-    doc.setFillColor(...PURPLE);
-    doc.rect(0, y, W, 8, "F");
-    doc.setTextColor(...WHITE);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.text(t.toUpperCase(), 14, y + 5.5);
-    y += 13;
-    doc.setTextColor(...DARK);
-  };
-
-  const row = (label, value, lc = GRAY, vc = DARK) => {
-    checkPage(10);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...lc);
-    doc.text(String(label), 14, y);
-    doc.setTextColor(...vc);
-    doc.setFont("helvetica", "bold");
-    doc.text(String(value ?? "—"), 85, y);
-    y += 7;
-  };
-
-  const divider = () => {
-    checkPage(6);
-    doc.setDrawColor(220, 220, 230);
-    doc.line(14, y, W - 14, y);
-    y += 5;
-  };
-
-  const prose = (heading, text) => {
-    const clean = stripMd(text);
-    if (!clean) return;
-    checkPage(14);
-    doc.setFontSize(8.5);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...PURPLE);
-    doc.text(heading, 14, y);
-    y += 6;
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...DARK);
-    doc.splitTextToSize(clean, W - 28).forEach(line => {
-      checkPage(7);
-      doc.text(line, 14, y);
-      y += 6;
-    });
-    y += 2;
-  };
-
-  const listItem = (num, text, color = PURPLE) => {
-    const clean = stripMd(text);
-    if (!clean) return;
-    checkPage(14);
-    doc.setFillColor(...color);
-    doc.circle(18, y - 2, 2.5, "F");
-    doc.setTextColor(...WHITE);
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "bold");
-    doc.text(String(num), num < 10 ? 17 : 16, y - 0.5);
-    doc.setTextColor(...DARK);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.splitTextToSize(clean, W - 40).forEach(line => { checkPage(7); doc.text(line, 26, y); y += 6; });
-    y += 1;
-  };
-
-  const subLabel = (text) => {
-    checkPage(8);
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...PURPLE);
-    doc.text(text, 14, y);
-    y += 7;
-    doc.setTextColor(...DARK);
-  };
-
-  // ── Pull data with FLEXIBLE KEY FALLBACKS ─────────────────────────────
-  // project_info
-  const proj         = pick(viz, "project_info") || {};
-  const projName     = pick(proj, "project_name", "name", "site", "sector") || pick(viz, "project_name") || "—";
-  const projSite     = pick(proj, "site", "sector", "site_sector", "location") || pick(viz, "site", "sector") || "—";
-  const projType     = capFirst(pick(proj, "project_type", "type") || pick(viz, "project_type") || "—");
-  const projBldgType = capFirst(pick(proj, "building_type", "structure_type") || "—");
-  const projSqft     = safeNum(pick(proj, "total_sqft", "sqft", "floor_area") || pick(viz, "total_sqft") || 0);
-  const projFloors   = pick(proj, "floors", "num_floors", "stories") || pick(viz, "floors") || "—";
-  const projBudget   = capFirst(pick(proj, "budget_level", "budget") || "—");
-  const projTimeline = safeNum(pick(proj, "timeline_months", "duration_months", "timeline") || 0);
-  const projCity     = pick(proj, "city", "location") || pick(viz, "city") || "Islamabad";
-
-  // risk — tries "risk_metrics", "risk_assessment", "risk"
-  const riskObj  = pick(viz, "risk_metrics", "risk_assessment", "risk") || {};
-  const surv     = safeNum(pick(riskObj, "survival_probability", "survival_pct", "survival") || 0);
-  const dmgRisk  = safeNum(pick(riskObj, "damage_risk_percent", "damage_risk", "damage_pct") || 0);
-  const collProb = safeNum(pick(riskObj, "collapse_probability", "collapse_pct", "collapse") || 0);
-  const riskLvl  = String(pick(riskObj, "risk_level", "level", "hazard_level") || pick(viz, "risk_level") || "Moderate").toUpperCase();
-  const occupancy= pick(riskObj, "occupancy_status", "occupancy") || null;
-
-  // decision — tries "decision", "investment_decision"
-  const decisionObj  = pick(viz, "decision", "investment_decision") || {};
-  const decisionText = stripMd(pick(decisionObj, "verdict", "decision", "recommendation", "text") || "CONDITIONAL GO");
-  const conditions   = Array.isArray(decisionObj.conditions)
-    ? decisionObj.conditions
-    : (reportData?.action_recommendations || []).slice(0, 3);
-  const decisionNote = pick(decisionObj, "rationale", "note", "explanation", "summary") || null;
-
-  // costs — tries "costs", "cost_options", "cost_analysis"
-  const costsObj       = pick(viz, "costs", "cost_options", "cost_analysis", "cost_breakdown") || {};
-  const totalCost      = safeNum(pick(costsObj, "total_project_cost", "total_project_pkr", "total_cost", "total") || 0);
-  const seismicUpgrade = safeNum(pick(costsObj, "seismic_upgrade_total", "seismic_upgrade_pkr", "seismic_cost", "seismic_upgrade") || 0);
-  const contingencyPct = safeNum(pick(costsObj, "contingency_percent", "contingency_pct") || 5);
-  const contingency    = totalCost > 0 ? Math.round(totalCost * (contingencyPct / 100)) : 0;
-  const baseCost       = totalCost > 0 ? Math.max(0, totalCost - seismicUpgrade - contingency) : 0;
-  const baseCostPsf    = safeNum(pick(costsObj, "base_construction_psf", "base_psf", "cost_per_sqft") || 0);
-  const seismicPsf     = safeNum(pick(costsObj, "seismic_premium_psf", "seismic_psf") || 0);
-
-  // roi — tries "roi", "roi_analysis", fallback to costsObj
-  const roiObj          = pick(viz, "roi", "roi_analysis", "returns") || {};
-  const roiPayback      = safeNum(pick(roiObj, "payback_years", "roi_payback_years", "payback") || pick(costsObj, "roi_payback_years") || 0);
-  const insuranceSavPct = safeNum(pick(roiObj, "insurance_savings_percent", "insurance_savings_pct") || pick(costsObj, "insurance_savings_pct") || 0);
-  const resalePremPct   = safeNum(pick(roiObj, "resale_premium_percent", "resale_premium_pct") || pick(costsObj, "resale_premium_pct") || 0);
-  const roiNote         = pick(roiObj, "summary", "note", "explanation") || null;
-
-  // timeline — tries "timeline", "retrofit_steps", "construction_phases"
-  const tlObj   = pick(viz, "timeline", "construction_timeline") || {};
-  const phases  = pick(tlObj, "phases") || pick(viz, "retrofit_steps", "construction_phases") || {};
-  const totalMo = safeNum(pick(tlObj, "total_months", "duration_months") || projTimeline || 0);
-
-  // risk_scores_by_material — optional
-  const scoresRaw    = pick(viz, "risk_scores_by_material", "material_risk_scores") || null;
-  const scoreEntries = scoresRaw && typeof scoresRaw === "object"
-    ? Object.entries(scoresRaw).filter(([, v]) => !isNaN(Number(v))).map(([k, v]) => [k, safeNum(v)])
-    : [];
-
-  // Badge color
-  const rl = riskLvl;
-  const bc = ["SEVERE", "HIGH", "EXTREME"].includes(rl) ? RED : rl === "LOW" ? GREEN : AMBER;
-
-  // ── Cover ─────────────────────────────────────────────────────────────
-  doc.setFillColor(...PURPLE); doc.rect(0, 0, W, 44, "F");
-  doc.setTextColor(...WHITE); doc.setFontSize(22); doc.setFont("helvetica", "bold");
-  doc.text("Feasibility Report", 14, 18);
-  doc.setFontSize(10); doc.setFont("helvetica", "normal");
-  doc.text(`${projName}  •  ${projSite},  ${projCity}`, 14, 28);
-  doc.setFillColor(...bc); doc.roundedRect(W - 54, 8, 40, 10, 2, 2, "F");
-  doc.setTextColor(...WHITE); doc.setFontSize(7.5); doc.setFont("helvetica", "bold");
-  doc.text(rl || "UNKNOWN", W - 48, 14);
-  doc.setTextColor(200, 190, 230); doc.setFontSize(7); doc.setFont("helvetica", "normal");
-  doc.text(`Generated: ${new Date().toLocaleString()}`, W - 70, 40);
-  y = 52;
-
-  // ── 1. Investment Decision ────────────────────────────────────────────
-  sectionTitle("1. Investment Decision");
-  row("Verdict",    decisionText || "—", GRAY, AMBER);
-  row("Risk Level", rl || "—",           GRAY, bc);
-  if (occupancy) row("Occupancy", occupancy);
-  if (conditions.length > 0) {
-    y += 2;
-    subLabel("Key Conditions");
-    conditions.slice(0, 4).forEach((c, i) => listItem(i + 1, c, AMBER));
-  }
-  if (decisionNote) { y += 1; prose("Rationale:", decisionNote); }
-  divider();
-
-  // ── 2. Project Information ────────────────────────────────────────────
-  sectionTitle("2. Project Information");
-  row("Project Name",   projName);
-  row("Site / Sector",  projSite);
-  row("City",           projCity);
-  row("Project Type",   projType);
-  row("Building Type",  projBldgType);
-  row("Budget Level",   projBudget);
-  if (projTimeline > 0) row("Timeline",   `${projTimeline} months`);
-  if (projSqft > 0)     row("Floor Area", `${projSqft.toLocaleString()} sq ft`);
-  if (projFloors)       row("Floors",     String(projFloors));
-  divider();
-
-  // ── 3. Risk Metrics ───────────────────────────────────────────────────
-  sectionTitle("3. Risk Metrics");
-  if (surv > 0)     row("Survival Probability", `${surv.toFixed(1)}%`,     GRAY, GREEN);
-  if (collProb > 0) row("Collapse Probability", `${collProb.toFixed(1)}%`, GRAY, RED);
-  if (dmgRisk > 0)  row("Damage Risk",          `${dmgRisk.toFixed(1)}%`,  GRAY, RED);
-  if (surv === 0 && collProb === 0 && dmgRisk === 0) {
-    doc.setFontSize(9); doc.setTextColor(...GRAY);
-    doc.text("Risk probability data not returned by backend.", 14, y); y += 8;
-    doc.setTextColor(...DARK);
-  }
-  if (scoreEntries.length > 0) {
-    y += 2; subLabel("Risk Scores by Material");
-    scoreEntries.forEach(([k, v]) => row(`  ${capFirst(k)}`, `${v.toFixed(1)}%`));
-  }
-  if (pick(riskObj, "explanation", "summary", "note")) {
-    y += 1;
-    prose("Analysis:", pick(riskObj, "explanation", "summary", "note"));
-  }
-  divider();
-
-  // ── 4. Cost Analysis ──────────────────────────────────────────────────
-  sectionTitle("4. Cost Analysis");
-  if (baseCost > 0) {
-    row("Base Construction", `PKR ${formatPKR(baseCost)}`);
-    if (baseCostPsf > 0) {
-      doc.setFontSize(8.5); doc.setFont("helvetica", "normal"); doc.setTextColor(...GRAY);
-      doc.text(`  PKR ${baseCostPsf.toLocaleString()} per sq ft`, 20, y); y += 6;
-      doc.setTextColor(...DARK);
+  function checkPage(needed = 15) {
+    if (y + needed > PAGE_HEIGHT - 20) {
+      doc.addPage(); pageNum++; y = 25; return true;
     }
-  }
-  if (seismicUpgrade > 0) {
-    row("Seismic Upgrade", `PKR ${formatPKR(seismicUpgrade)}`, GRAY, AMBER);
-    if (seismicPsf > 0) {
-      doc.setFontSize(8.5); doc.setFont("helvetica", "normal"); doc.setTextColor(...GRAY);
-      doc.text(`  PKR ${seismicPsf.toLocaleString()} per sq ft premium`, 20, y); y += 6;
-      doc.setTextColor(...DARK);
-    }
-  }
-  if (contingency > 0) row(`Contingency (${contingencyPct}%)`, `PKR ${formatPKR(contingency)}`);
-  if (totalCost > 0)   row("Total Project Cost", `PKR ${formatPKR(totalCost)}`, GRAY, BLUE);
-  if (!baseCost && !totalCost) {
-    doc.setFontSize(9); doc.setTextColor(...GRAY);
-    doc.text("Cost data not returned by backend.", 14, y); y += 8;
-    doc.setTextColor(...DARK);
-  }
-  if (pick(costsObj, "notes", "note")) { y += 1; prose("Notes:", pick(costsObj, "notes", "note")); }
-  divider();
-
-  // ── 5. ROI Metrics ────────────────────────────────────────────────────
-  sectionTitle("5. ROI Metrics");
-  if (roiPayback > 0)      row("Payback Period",    `${roiPayback} years`);
-  if (insuranceSavPct > 0) row("Insurance Savings", `${insuranceSavPct}%`);
-  if (resalePremPct > 0)   row("Resale Premium",    `+${resalePremPct}%`);
-  if (!roiPayback && !insuranceSavPct && !resalePremPct) {
-    doc.setFontSize(9); doc.setTextColor(...GRAY);
-    doc.text("ROI data not returned by backend.", 14, y); y += 8;
-    doc.setTextColor(...DARK);
-  }
-  if (roiNote) { y += 1; prose("Summary:", roiNote); }
-  divider();
-
-  // ── 6. Implementation Timeline ────────────────────────────────────────
-  sectionTitle("6. Implementation Timeline");
-  const phaseEntries = typeof phases === "object"
-    ? Object.entries(phases).filter(([, v]) => safeNum(v) > 0)
-    : [];
-  if (phaseEntries.length === 0) {
-    doc.setFontSize(9); doc.setTextColor(...GRAY);
-    doc.text("Timeline data not returned by backend.", 14, y); y += 8;
-    doc.setTextColor(...DARK);
-  } else {
-    phaseEntries.forEach(([key, months], i) => {
-      row(`${i + 1}.  ${capFirst(key)}`, `${safeNum(months)} months`);
-    });
-    if (totalMo > 0) { y += 1; row("Total Duration", `${totalMo} months`, GRAY, BLUE); }
-  }
-  divider();
-
-  // ── 7. Risk Assessment Summary ────────────────────────────────────────
-  const riskSummary = reportData?.risk_assessment_summary || [];
-  if (riskSummary.length > 0) {
-    sectionTitle("7. Risk Assessment Summary");
-    riskSummary.forEach((r, i) => listItem(i + 1, r, PURPLE));
-    divider();
+    return false;
   }
 
-  // ── 8. Action Recommendations ─────────────────────────────────────────
-  const actions = reportData?.action_recommendations || [];
-  if (actions.length > 0) {
-    sectionTitle("8. Action Recommendations");
-    let actionNum = 0;
-    actions.forEach(a => {
-      const clean = stripMd(String(a));
-      if (!clean) return;
-      const isHeading = /^[A-Z0-9][A-Z0-9\s\-–—:()/]*$/.test(clean) && clean.length < 80;
-      if (isHeading) {
-        checkPage(10);
-        doc.setFontSize(8); doc.setFont("helvetica", "bold"); doc.setTextColor(...PURPLE);
-        doc.text(clean, 14, y); y += 8; doc.setTextColor(...DARK);
-      } else {
-        actionNum++;
-        listItem(actionNum, a, GREEN);
+  function cleanMarkdown(text) {
+    if (!text) return "";
+    let s = String(text);
+    s = s.replace(/\*\*/g, ""); s = s.replace(/\*/g, "");
+    s = s.replace(/__/g, "");   s = s.replace(/(?<!\w)_(?!\w)/g, "");
+    s = s.replace(/`/g, "");    s = s.replace(/\\/g, "");
+    s = s.replace(/\s+/g, " "); s = s.replace(/\s+\./g, ".");
+    s = s.replace(/\s+,/g, ",");
+    return s.trim();
+  }
+
+  function isTableRow(line) {
+    return line.trim().startsWith("|") && line.trim().endsWith("|");
+  }
+
+  function isSeparatorRow(line) {
+    return /^\|[\s\-|:]+\|$/.test(line.trim());
+  }
+
+  function parseMarkdownTable(tableLines) {
+    const dataLines = tableLines.filter(l => !isSeparatorRow(l));
+    const parsed = dataLines.map(line =>
+      line.trim().replace(/^\||\|$/g, "").split("|").map(cell => cleanMarkdown(cell.trim()))
+    );
+    if (parsed.length === 0) return null;
+    return { headers: parsed[0], rows: parsed.slice(1) };
+  }
+
+  function drawCard(title, contentLines, bulletItems) {
+    const CORNER      = 3;
+    const INNER_WIDTH = CONTENT_WIDTH - 12;
+    const HEADER_H    = 9;
+    const TEXT_PAD_Y  = 6;
+    const LINE_H      = 5;
+    const BULLET_GAP  = 3;
+    const CARD_PAD_B  = 6;
+
+    const measuredContent = [];
+    if (contentLines && contentLines.length > 0) {
+      for (const line of contentLines) {
+        if (!line || !line.trim()) continue;
+        measuredContent.push(doc.splitTextToSize(String(line), INNER_WIDTH));
       }
-    });
-    divider();
+    }
+    const measuredBullets = [];
+    if (bulletItems && bulletItems.length > 0) {
+      for (const item of bulletItems) {
+        if (!item || !item.trim()) continue;
+        const clean = cleanMarkdown(item);
+        if (clean.length < 3) continue;
+        measuredBullets.push(doc.splitTextToSize(clean, INNER_WIDTH - 8));
+      }
+    }
+
+    let innerH = 0;
+    for (const lines of measuredContent) innerH += lines.length * LINE_H + 1;
+    if (measuredContent.length > 0) innerH += 2;
+    for (const lines of measuredBullets) innerH += lines.length * LINE_H + BULLET_GAP;
+    const totalCardH = HEADER_H + TEXT_PAD_Y + innerH + CARD_PAD_B;
+
+    if (totalCardH <= PAGE_HEIGHT - 40) { checkPage(totalCardH); } else { checkPage(HEADER_H + 20); }
+
+    const cardTop = y;
+    doc.setFillColor(250, 250, 252);
+    doc.setDrawColor(220, 220, 230);
+    doc.roundedRect(LEFT_MARGIN - 2, cardTop, CONTENT_WIDTH + 4, totalCardH, CORNER, CORNER, "FD");
+    doc.setFillColor(107, 70, 193);
+    doc.roundedRect(LEFT_MARGIN - 2, cardTop, CONTENT_WIDTH + 4, HEADER_H, CORNER, CORNER, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10); doc.setFont("helvetica", "bold");
+    doc.text(title, LEFT_MARGIN + 2, cardTop + 6);
+    doc.setDrawColor(220, 220, 230);
+    doc.line(LEFT_MARGIN, cardTop + HEADER_H, RIGHT_MARGIN, cardTop + HEADER_H);
+
+    y = cardTop + HEADER_H + TEXT_PAD_Y;
+    doc.setTextColor(30, 30, 50); doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+
+    for (const wrappedLines of measuredContent) {
+      for (const line of wrappedLines) {
+        if (y + LINE_H > PAGE_HEIGHT - 20) {
+          doc.addPage(); pageNum++; y = 25;
+          doc.setFillColor(107, 70, 193);
+          doc.roundedRect(LEFT_MARGIN - 2, y, CONTENT_WIDTH + 4, HEADER_H, CORNER, CORNER, "F");
+          doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+          doc.text(title + " (cont.)", LEFT_MARGIN + 2, y + 6);
+          doc.setFillColor(250, 250, 252); doc.setDrawColor(220, 220, 230);
+          doc.roundedRect(LEFT_MARGIN - 2, y, CONTENT_WIDTH + 4, PAGE_HEIGHT - y - 22, CORNER, CORNER, "FD");
+          y += HEADER_H + TEXT_PAD_Y;
+          doc.setTextColor(30, 30, 50); doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+        }
+        doc.text(line, LEFT_MARGIN + 4, y); y += LINE_H;
+      }
+    }
+    if (measuredContent.length > 0) y += 2;
+
+    for (const wrappedLines of measuredBullets) {
+      const itemH = wrappedLines.length * LINE_H + BULLET_GAP;
+      if (y + itemH > PAGE_HEIGHT - 20) {
+        doc.addPage(); pageNum++; y = 25;
+        doc.setFillColor(107, 70, 193);
+        doc.roundedRect(LEFT_MARGIN - 2, y, CONTENT_WIDTH + 4, HEADER_H, CORNER, CORNER, "F");
+        doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+        doc.text(title + " (cont.)", LEFT_MARGIN + 2, y + 6);
+        doc.setFillColor(250, 250, 252); doc.setDrawColor(220, 220, 230);
+        doc.roundedRect(LEFT_MARGIN - 2, y, CONTENT_WIDTH + 4, PAGE_HEIGHT - y - 22, CORNER, CORNER, "FD");
+        y += HEADER_H + TEXT_PAD_Y;
+      }
+      doc.setFillColor(107, 70, 193);
+      doc.circle(LEFT_MARGIN + 5, y - 1, 1.2, "F");
+      doc.setTextColor(30, 30, 50); doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+      wrappedLines.forEach((line, idx) => { doc.text(line, LEFT_MARGIN + 10, y + idx * LINE_H); });
+      y += wrappedLines.length * LINE_H + BULLET_GAP;
+    }
+    y += CARD_PAD_B;
   }
 
-  // ── 9. Full Detailed Report ───────────────────────────────────────────
-  if (reportData?.full_detailed_report) {
-    sectionTitle("9. Full Detailed Report");
-    doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.setTextColor(...DARK);
-    doc.splitTextToSize(stripMd(reportData.full_detailed_report), W - 28).forEach(line => {
-      checkPage(8); doc.text(line, 14, y); y += 6;
-    });
-    divider();
+  function sectionTitle(text) {
+    checkPage(12);
+    doc.setFillColor(107, 70, 193);
+    doc.rect(0, y - 4, PAGE_WIDTH, 8, "F");
+    doc.setTextColor(255, 255, 255); doc.setFontSize(11); doc.setFont("helvetica", "bold");
+    doc.text(text.toUpperCase(), LEFT_MARGIN, y);
+    y += 8; doc.setTextColor(30, 30, 50);
   }
 
-  // ── Footer ────────────────────────────────────────────────────────────
-  const total = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= total; i++) {
+  function row(label, value, valueColorHex) {
+    checkPage(8);
+    doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.setTextColor(100, 100, 120);
+    doc.text(label + ":", LEFT_MARGIN, y);
+    doc.setTextColor(valueColorHex || "#1e1e32"); doc.setFont("helvetica", "bold");
+    const lines = doc.splitTextToSize(String(value || "—"), CONTENT_WIDTH - 55);
+    lines.forEach((l) => { checkPage(6); doc.text(l, LEFT_MARGIN + 55, y); y += 5; });
+    y += 2;
+  }
+
+  function drawTable(headers, rows, columnWidths) {
+    if (!rows || rows.length === 0) return;
+    const colWidths = columnWidths || Array(headers.length).fill(CONTENT_WIDTH / headers.length);
+    checkPage(15 + rows.length * 8);
+    let cx = LEFT_MARGIN;
+    doc.setFillColor(107, 70, 193);
+    doc.rect(LEFT_MARGIN - 2, y - 5, CONTENT_WIDTH + 4, 8, "F");
+    doc.setTextColor(255, 255, 255); doc.setFontSize(9); doc.setFont("helvetica", "bold");
+    headers.forEach((h, i) => { doc.text(h, cx + 2, y); cx += colWidths[i]; });
+    y += 6;
+    doc.setTextColor(30, 30, 50); doc.setFont("helvetica", "normal"); doc.setFontSize(8);
+    rows.forEach((rowData, ri) => {
+      cx = LEFT_MARGIN;
+      const rowLines = rowData.map((cell, i) => doc.splitTextToSize(String(cell || "—"), colWidths[i] - 4));
+      const maxH = Math.max(5, ...rowLines.map(l => l.length * 4));
+      checkPage(maxH + 5);
+      if (ri % 2 === 1) { doc.setFillColor(245, 245, 250); doc.rect(LEFT_MARGIN - 2, y - 4, CONTENT_WIDTH + 4, maxH, "F"); }
+      rowData.forEach((cell, i) => {
+        doc.setFont("helvetica", i === 0 ? "bold" : "normal");
+        rowLines[i].forEach((line, li) => doc.text(line, cx + 2, y + li * 4));
+        cx += colWidths[i];
+      });
+      y += maxH + 2;
+    });
+    y += 4;
+  }
+
+  function paragraph(text, isBold) {
+    if (!text) return;
+    const lines = doc.splitTextToSize(text, CONTENT_WIDTH);
+    checkPage(lines.length * 5);
+    doc.setFont("helvetica", isBold ? "bold" : "normal"); doc.setFontSize(9); doc.setTextColor(30, 30, 50);
+    lines.forEach(l => { doc.text(l, LEFT_MARGIN, y); y += 5; });
+    y += 3;
+  }
+
+  function divider() {
+    checkPage(5);
+    doc.setDrawColor(220, 220, 230);
+    doc.line(LEFT_MARGIN, y, RIGHT_MARGIN, y);
+    y += 6;
+  }
+
+  // ── Render full_detailed_report — ALL sections, with markdown table support ──
+  // Mirrors Govreport.js renderDetailedReport exactly
+  function renderDetailedReport(reportText) {
+    if (!reportText) return;
+
+    const rawLines = reportText.split("\n");
+    let curSection = null;
+    let curContent = [];
+    let curBullets = [];
+    let tableBuffer = [];
+    let inTable = false;
+
+    function flushTable() {
+      if (tableBuffer.length === 0) return;
+      const parsed = parseMarkdownTable(tableBuffer);
+      if (parsed && parsed.headers.length > 0 && parsed.rows.length > 0) {
+        const colW = Array(parsed.headers.length).fill(CONTENT_WIDTH / parsed.headers.length);
+        drawTable(parsed.headers, parsed.rows, colW);
+      }
+      tableBuffer = [];
+      inTable = false;
+    }
+
+    function flushSection() {
+      flushTable();
+      if (!curSection) { curContent = []; curBullets = []; return; }
+      if (curContent.length > 0 || curBullets.length > 0) {
+        drawCard(curSection, curContent.length ? curContent : null, curBullets.length ? curBullets : null);
+      }
+      curContent = []; curBullets = [];
+    }
+
+    for (const line of rawLines) {
+      const trimmed = line.trim();
+
+      if (!trimmed) {
+        if (inTable) flushTable();
+        continue;
+      }
+
+      if (trimmed.match(/^#{1,3}\s/)) {
+        flushSection();
+        curSection = cleanMarkdown(trimmed.replace(/^#+\s*/, ""));
+        continue;
+      }
+
+      // If no section heading seen yet, treat entire content as one section
+      if (!curSection) {
+        curSection = "Detailed Report";
+      }
+
+      if (isTableRow(trimmed)) {
+        if ((curContent.length > 0 || curBullets.length > 0) && !inTable) {
+          drawCard(curSection, curContent.length ? curContent : null, curBullets.length ? curBullets : null);
+          curContent = []; curBullets = [];
+        }
+        inTable = true;
+        if (!isSeparatorRow(trimmed)) {
+          tableBuffer.push(trimmed);
+        }
+        continue;
+      }
+
+      if (inTable) flushTable();
+
+      const clean = cleanMarkdown(trimmed);
+      if (!clean) continue;
+
+      if (trimmed.match(/^[\-\*•]\s/) || trimmed.match(/^\d+\.\s/)) {
+        const bt = cleanMarkdown(trimmed.replace(/^[\-\*•\d+\.\s]+/, ""));
+        if (bt.length > 3) curBullets.push(bt);
+      } else {
+        const sentences = clean.split(/(?<=\.)\s+/);
+        for (let s of sentences) {
+          s = s.trim();
+          if (s.length > 5) {
+            if (!s.endsWith(".") && !s.endsWith(":")) s += ".";
+            curContent.push(s);
+          }
+        }
+      }
+    }
+
+    flushSection();
+  }
+
+  // ── Data extraction ──────────────────────────────────────────────────────
+  const viz   = reportData.visualization_data || {};
+  const proj  = viz.project_info  || {};
+  const risk  = viz.risk_metrics  || {};
+  const dec   = viz.decision      || {};
+  const costs = viz.costs         || {};
+  const tl    = viz.timeline      || {};
+  const roi   = viz.roi           || {};
+  const meta  = reportData.metadata || {};
+
+  const formatPKR = n => {
+    if (!n && n !== 0) return "—";
+    if (n >= 1e9) return `PKR ${(n / 1e9).toFixed(2)}B`;
+    if (n >= 1e6) return `PKR ${(n / 1e6).toFixed(0)}M`;
+    if (n >= 1e3) return `PKR ${(n / 1e3).toFixed(0)}K`;
+    return `PKR ${n.toLocaleString()}`;
+  };
+
+  // ── COVER PAGE ───────────────────────────────────────────────────────────
+  doc.setFillColor(107, 70, 193);
+  doc.rect(0, 0, PAGE_WIDTH, 45, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(22); doc.setFont("helvetica", "bold");
+  doc.text("Developer Feasibility Report", LEFT_MARGIN, 17);
+  doc.setFontSize(12); doc.setFont("helvetica", "normal");
+  doc.text(`${proj.site || "Site"} • ${proj.project_type || "Project"} • ${meta.building_class || ""}`, LEFT_MARGIN, 27);
+  doc.setFontSize(10);
+  doc.text(`${(proj.total_sqft || 0).toLocaleString()} sq ft • ${proj.floors || "—"} floors • Mw ${meta.target_magnitude || "—"} design`, LEFT_MARGIN, 35);
+  const verdictColor = (dec.verdict === "GO") ? [16, 185, 129] : [220, 53, 69];
+  doc.setFillColor(...verdictColor);
+  doc.roundedRect(PAGE_WIDTH - 45, 10, 35, 8, 2, 2, "F");
+  doc.setFontSize(9); doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold");
+  doc.text(dec.verdict || "—", PAGE_WIDTH - 32, 16);
+  doc.setFontSize(7); doc.setTextColor(200, 190, 230); doc.setFont("helvetica", "normal");
+  doc.text(`Generated: ${new Date().toLocaleString()}`, PAGE_WIDTH - 60, 40);
+  y = 55;
+
+  // ── 1. DECISION OVERVIEW ─────────────────────────────────────────────────
+  sectionTitle("1. Decision Overview");
+  const overviewCards = [
+    { label: "Verdict",              value: dec.verdict || "—",                                   color: dec.verdict === "GO" ? "#10b981" : "#dc3545" },
+    { label: "Survival Probability", value: `${risk.survival_probability || 0}%`,                 color: "#6b46c1" },
+    { label: "Damage Risk",          value: `${risk.damage_risk_percent  || 0}%`,                 color: "#f59e0b" },
+    { label: "Risk Level",           value: risk.risk_level || "—",                               color: "#1e1e32" },
+    { label: "Total Project Cost",   value: formatPKR(costs.total_project_cost),                  color: "#1e1e32" },
+    { label: "Payback Period",       value: roi.payback_years ? `${roi.payback_years} yrs` : "—", color: "#10b981" },
+  ];
+  let cardX = LEFT_MARGIN;
+  overviewCards.forEach((card, idx) => {
+    if (idx % 2 === 0 && idx > 0) { y += 15; cardX = LEFT_MARGIN; }
+    checkPage(15);
+    doc.setFillColor(248, 249, 250);
+    doc.roundedRect(cardX, y - 5, (CONTENT_WIDTH / 2) - 5, 12, 2, 2, "F");
+    doc.setFontSize(8); doc.setTextColor(100, 100, 120); doc.setFont("helvetica", "normal");
+    doc.text(card.label, cardX + 3, y);
+    doc.setFontSize(11); doc.setFont("helvetica", "bold"); doc.setTextColor(card.color);
+    doc.text(String(card.value), cardX + 3, y + 5);
+    cardX += (CONTENT_WIDTH / 2);
+  });
+  y += 18;
+  if (dec.conditions && dec.conditions.length > 0) {
+    drawCard("GO Conditions", null, dec.conditions.map(c => cleanMarkdown(c)));
+  }
+  divider();
+
+  // ── 2. PROJECT PARAMETERS ────────────────────────────────────────────────
+  sectionTitle("2. Project Parameters");
+  row("Site",                proj.site);
+  row("Project Type",        proj.project_type);
+  row("Building Type",       proj.building_type);
+  row("Building Class",      meta.building_class);
+  row("Project Name",        meta.project_name);
+  row("Total Area",          `${(proj.total_sqft || 0).toLocaleString()} sq ft`);
+  row("Floors",              String(proj.floors || "—"));
+  row("Budget Level",        proj.budget_level);
+  row("Timeline",            `${proj.timeline_months || "—"} months`);
+  row("Target Magnitude",    `Mw ${meta.target_magnitude || "—"}`);
+  row("Structural Material", meta.normalized_material);
+  divider();
+
+  // ── 3. SEISMIC RISK METRICS ──────────────────────────────────────────────
+  sectionTitle("3. Seismic Risk Metrics");
+  row("Survival Probability", `${risk.survival_probability || 0}%`, "#10b981");
+  row("Damage Risk",          `${risk.damage_risk_percent  || 0}%`, "#dc3545");
+  row("Risk Level",           risk.risk_level || "—");
+  y += 3;
+  if (meta.risk_scores && Object.keys(meta.risk_scores).length > 0) {
+    doc.setFontSize(9); doc.setFont("helvetica", "bold"); doc.setTextColor(107, 70, 193);
+    doc.text("Risk Scores by Material Type:", LEFT_MARGIN, y); y += 6;
+    drawTable(
+      ["Material", "Risk Score (%)"],
+      Object.entries(meta.risk_scores).map(([k, v]) => [k, `${v}%`]),
+      [CONTENT_WIDTH * 0.7, CONTENT_WIDTH * 0.3]
+    );
+  }
+  divider();
+
+  // ── 4. COST BREAKDOWN ────────────────────────────────────────────────────
+  sectionTitle("4. Cost Breakdown");
+  const baseTotal      = (costs.base_construction_psf || 0) * (proj.total_sqft || 0);
+  const contingencyAmt = Math.round((costs.total_project_cost || 0) * ((costs.contingency_percent || 0) / 100));
+  drawTable(
+    ["Line Item", "Amount"],
+    [
+      ["Base Construction",                              formatPKR(baseTotal)],
+      ["Seismic Upgrade",                                formatPKR(costs.seismic_upgrade_total)],
+      [`Contingency (${costs.contingency_percent || 0}%)`, formatPKR(contingencyAmt)],
+      ["Total Project Cost",                             formatPKR(costs.total_project_cost)],
+    ],
+    [CONTENT_WIDTH * 0.7, CONTENT_WIDTH * 0.3]
+  );
+  row("Base Cost per sq ft",       `PKR ${(costs.base_construction_psf || 0).toLocaleString()}`);
+  row("Seismic Premium per sq ft", `PKR ${(costs.seismic_premium_psf   || 0).toLocaleString()}`);
+  divider();
+
+  // ── 5. ROI ANALYSIS ──────────────────────────────────────────────────────
+  sectionTitle("5. ROI Analysis");
+  row("Payback Period",             roi.payback_years            ? `${roi.payback_years} years`            : "—", "#10b981");
+  row("Insurance Savings",          roi.insurance_savings_percent ? `${roi.insurance_savings_percent}%`    : "—");
+  row("Resale Premium",             roi.resale_premium_percent    ? `${roi.resale_premium_percent}%`       : "—");
+  row("Seismic Upgrade Investment", formatPKR(costs.seismic_upgrade_total));
+  divider();
+
+  // ── 6. IMPLEMENTATION TIMELINE ───────────────────────────────────────────
+  sectionTitle("6. Implementation Timeline");
+  if (tl.phases && Object.keys(tl.phases).length > 0) {
+    drawTable(
+      ["Phase", "Duration"],
+      Object.entries(tl.phases).map(([phase, months]) => [
+        phase.charAt(0).toUpperCase() + phase.slice(1), `${months} months`
+      ]),
+      [CONTENT_WIDTH * 0.7, CONTENT_WIDTH * 0.3]
+    );
+    row("Total Duration", `${tl.total_months || "—"} months`);
+  } else {
+    paragraph("No timeline phase data available.");
+  }
+  divider();
+
+  // ── 7. RISK ASSESSMENT SUMMARY ───────────────────────────────────────────
+  sectionTitle("7. Risk Assessment Summary");
+  if (reportData.risk_assessment_summary && reportData.risk_assessment_summary.length > 0) {
+    drawCard("Risk Assessment Summary", null,
+      reportData.risk_assessment_summary.map(i => cleanMarkdown(i)).filter(i => i.length > 3));
+  } else {
+    drawCard("Risk Assessment Summary", ["No risk assessment summary available."]);
+  }
+  y += 5;
+
+  // ── 8. ACTION RECOMMENDATIONS ────────────────────────────────────────────
+  sectionTitle("8. Action Recommendations");
+  if (reportData.action_recommendations && reportData.action_recommendations.length > 0) {
+    drawCard("Action Recommendations", null,
+      reportData.action_recommendations.map(i => cleanMarkdown(i)).filter(i => i.length > 3));
+  } else {
+    drawCard("Action Recommendations", ["No action recommendations available."]);
+  }
+  y += 5;
+
+  // ── 9. DETAILED REPORT — mirrors Gov section 10 exactly ──────────────────
+  // Pull from top-level field first, then fallback to nested locations
+  const detailedReportText =
+    reportData.full_detailed_report ||
+    reportData.detailed_report ||
+    viz.full_detailed_report ||
+    "";
+
+  sectionTitle("9. Detailed Report");
+  if (detailedReportText && detailedReportText.trim().length > 0) {
+    renderDetailedReport(detailedReportText);
+  } else {
+    drawCard("Detailed Report", ["No detailed report content available."]);
+  }
+  divider();
+
+  // ── FOOTER ───────────────────────────────────────────────────────────────
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
-    doc.setFillColor(...LIGHT); doc.rect(0, 285, W, 12, "F");
-    doc.setTextColor(...GRAY); doc.setFontSize(7); doc.setFont("helvetica", "normal");
-    doc.text("QuakeVision AI  •  Real Estate Feasibility Report  •  Confidential", 14, 291);
-    doc.text(`Page ${i} of ${total}`, W - 28, 291);
+    doc.setFillColor(245, 245, 250);
+    doc.rect(0, PAGE_HEIGHT - 15, PAGE_WIDTH, 12, "F");
+    doc.setTextColor(120, 120, 140);
+    doc.setFontSize(8); doc.setFont("helvetica", "normal");
+    doc.text("QuakeVision AI  •  Developer Feasibility Report  •  Confidential", LEFT_MARGIN, PAGE_HEIGHT - 8);
+    doc.text(`Page ${i} of ${totalPages}`, PAGE_WIDTH - 25, PAGE_HEIGHT - 8);
   }
 
-  doc.save(`Feasibility_${(projName || "Report").replace(/\s+/g, "_")}|| ""}.pdf`);
+  const siteName = (proj.site || meta.project_name || "Report").replace(/\s+/g, "_");
+  const filename = `DevReport_${siteName}_Mw${meta.target_magnitude || ""}.pdf`;
+  doc.save(filename);
 }

@@ -43,7 +43,7 @@ function FitBounds({ rows }) {
   return null;
 }
 
-// ── Fly to selected alert ─────────────────────────────────────────────────
+// ── Fly to selected alert ──────────────────────────────────────────────────
 function FlyToLocation({ selectedLocation }) {
   const map = useMap();
   useEffect(() => {
@@ -53,7 +53,7 @@ function FlyToLocation({ selectedLocation }) {
   return null;
 }
 
-// ── Map component ─────────────────────────────────────────────────────────
+// ── Map component ──────────────────────────────────────────────────────────
 export default function EarthquakeMap({ rows, selectedLocation }) {
   return (
     <MapContainer
@@ -62,7 +62,6 @@ export default function EarthquakeMap({ rows, selectedLocation }) {
       style={{ height: "100%", width: "100%" }}
       scrollWheelZoom
     >
-      {/* Clean light tile layer */}
       <TileLayer
         attribution='&copy; <a href="https://carto.com">CARTO</a>'
         url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
