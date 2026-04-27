@@ -416,8 +416,7 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-md bg-[#6B46C1] flex items-center justify-center">
               <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5}
-                  d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                <path d="M3 12h18M12 3v18M5 5l14 14M19 5L5 19" />
               </svg>
             </div>
             <span className="font-black text-gray-900">Quake<span className="text-[#6B46C1]">Vision</span></span>
