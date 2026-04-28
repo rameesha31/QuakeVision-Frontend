@@ -91,7 +91,7 @@ function renderBubble(msg, i, chatAction, applyRegen, reportData) {
         {[
           { key: "summary",    icon: "📋", label: "Summary",       desc: "Quick policy overview" },
           { key: "qa",         icon: "❓", label: "Ask a Question", desc: "Lives, budget, timeline analysis" },
-          { key: "regenerate", icon: "🔄", label: "Regenerate",     desc: "Modify policy parameters" },
+         // { key: "regenerate", icon: "🔄", label: "Regenerate",     desc: "Modify policy parameters" },
         ].map(o => (
           <button key={o.key} onClick={() => chatAction(o.key)}
             className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-white text-left hover:border-[#6B46C1]/40 transition-all w-full">
